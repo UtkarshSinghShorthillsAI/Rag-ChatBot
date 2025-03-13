@@ -1,9 +1,8 @@
 import os
 import json
-import chromadb
 import requests
 from typing import List, Dict
-from langchain_community.vectorstores import Chroma
+from src.retriever.vector_db import VectorDB  # Import our new modular DB class
 
 # Get API key from environment variable
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -34,13 +33,20 @@ class GeminiEmbedding:
                 "content": {"parts": [{"text": text}]}
             }
             response = requests.post(self.API_URL, json=payload, headers=headers, params=params)
-            data = response.json()
 
-            if "embedding" in data:
-                embeddings.append(data["embedding"]["values"])  # Extract embeddings
-            else:
-                print(f"⚠️ Error embedding text: {data}")
-                embeddings.append([])  # Append empty embedding in case of failure
+            # Debugging API Response
+            print(f"🔍 API Response ({response.status_code}): {response.text}")
+
+            try:
+                data = response.json()
+                if "embedding" in data:
+                    embeddings.append(data["embedding"]["values"])
+                else:
+                    print(f"⚠️ API returned unexpected response: {data}")
+                    embeddings.append([])  # Append empty embedding in case of failure
+            except requests.exceptions.JSONDecodeError:
+                print(f"❌ Failed to parse JSON response. Full response: {response.text}")
+                embeddings.append([])
 
         return embeddings
 
@@ -50,18 +56,13 @@ class EmbeddingPipeline:
     Handles the full embedding process:
     - Loads chunked data
     - Generates embeddings via Gemini API
-    - Stores embeddings in ChromaDB
+    - Stores embeddings in VectorDB
     """
 
-    def __init__(self, input_folder="data/chunked", db_path="data/embeddings"):
+    def __init__(self, input_folder="data/chunked"):
         self.input_folder = input_folder
-        self.db_path = db_path
-        os.makedirs(db_path, exist_ok=True)  # Ensure embeddings directory exists
         self.embedding_model = GeminiEmbedding(GEMINI_API_KEY)  # Using direct API calls
-
-        # Initialize ChromaDB
-        self.client = chromadb.PersistentClient(path=self.db_path)
-        self.collection = self.client.get_or_create_collection("minecraft_embeddings")
+        self.vector_db = VectorDB()  # Using modular VectorDB
 
     def load_chunks(self) -> List[Dict]:
         """
@@ -77,61 +78,21 @@ class EmbeddingPipeline:
 
         return chunks
 
-    def convert_table_to_text(self, table_chunk: Dict) -> str:
-        """
-        Converts table chunk into a text-based representation.
-        Example:
-        "Achievements Table: Ice Bucket Challenge - Obtain a block of Obsidian, Nether - Enter the Nether dimension."
-        """
-        section = table_chunk.get("section", "Unknown Section")
-        rows_text = []
-        headers = table_chunk["headers"]
-
-        for row in table_chunk["rows"]:
-            row_text = ", ".join(f"{headers[i]}: {value}" for i, value in enumerate(row.values()))
-            rows_text.append(row_text)
-
-        return f"{section} Table: " + " | ".join(rows_text)
-
     def store_embeddings(self):
         """
-        Embeds chunks and stores them in ChromaDB.
+        Embeds chunks and stores them in VectorDB.
         """
         print("🔍 Loading chunked data...")
         chunks = self.load_chunks()
 
-        # Separate text chunks & table chunks
-        text_chunks = [chunk for chunk in chunks if "text" in chunk]
-        table_chunks = [chunk for chunk in chunks if "rows" in chunk]
+        texts = [chunk["text"] for chunk in chunks if "text" in chunk]
+        table_texts = [self.vector_db.convert_table_to_text(chunk) for chunk in chunks if "rows" in chunk]
 
-        texts = [chunk["text"] for chunk in text_chunks]  # Normal text chunks
-        table_texts = [self.convert_table_to_text(table) for table in table_chunks]  # Table chunks as text
-
-        # Generate embeddings
         print("⚡ Generating embeddings...")
         embeddings = self.embedding_model.embed(texts + table_texts)
 
-        print("📥 Storing embeddings in ChromaDB...")
-        # Store text chunks
-        for idx, chunk in enumerate(text_chunks):
-            self.collection.add(
-                ids=[f"text_chunk_{idx}"],
-                embeddings=[embeddings[idx]],
-                metadatas=[{"heading": chunk["heading"], "chunk_id": chunk["chunk_id"]}],
-                documents=[chunk["text"]]
-            )
-
-        # Store table chunks
-        for idx, chunk in enumerate(table_chunks):
-            table_text = table_texts[idx]
-            self.collection.add(
-                ids=[f"table_chunk_{idx}"],
-                embeddings=[embeddings[len(text_chunks) + idx]],
-                metadatas=[{"section": chunk["section"], "chunk_id": chunk["chunk_id"]}],
-                documents=[table_text]
-            )
-
-        print(f"✅ Successfully stored {len(chunks)} embeddings in ChromaDB.")
+        # Store in VectorDB
+        self.vector_db.add_embeddings(embeddings, chunks)
 
     def run(self):
         """
