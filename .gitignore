@@ -1,0 +1,39 @@
+# Ignore Python bytecode & cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore Virtual Environment
+.venv/
+venv/
+env/
+.env
+
+# Ignore raw, processed, and chunked data
+data/raw/
+data/processed/
+data/chunked/
+data/*.json
+
+# Ignore logs & temporary files
+*.log
+*.tmp
+*.swp
+.DS_Store
+
+# Ignore Browser Drivers & Session Files
+selenium-sessions/
+chromedriver.log
+
+# Ignore VS Code Settings
+.vscode/
+
+# Ignore Jupyter Notebook Checkpoints (if used)
+.ipynb_checkpoints/
+
+# Ignore Dependency Management Files (Optional)
+Pipfile
+Pipfile.lock
+poetry.lock
+
