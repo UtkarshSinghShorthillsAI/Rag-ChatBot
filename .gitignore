@@ -14,6 +14,7 @@ env/
 data/raw/
 data/processed/
 data/chunked/
+data/embeddings/
 data/*.json
 
 # Ignore logs & temporary files
