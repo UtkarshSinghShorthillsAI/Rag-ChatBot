@@ -2,14 +2,13 @@ import os
 import json
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-
 class Chunker:
     def __init__(
         self,
         input_dir="data/processed",
         output_dir="data/chunks",
         chunk_size=400,
-        chunk_overlap=75,
+        chunk_overlap=80,
     ):
         self.input_dir = input_dir
         self.output_dir = output_dir
@@ -35,7 +34,7 @@ class Chunker:
     def save_chunks(self, filename, chunks):
         output_path = os.path.join(self.output_dir, filename)
         try:
-            with open(output_path := os.path.join(self.output_dir, filename), "w", encoding="utf-8") as file:
+            with open(output_path, "w", encoding="utf-8") as file:
                 json.dump(chunks, file, ensure_ascii=False, indent=4)
             print(f"✅ Chunks saved to {output_path}")
         except Exception as e:
@@ -45,15 +44,17 @@ class Chunker:
         chunks = []
         for section in document:
             content = section.get("content", "")
-            title = section.get("title", "untitled")
+            title = section.get("title", "Untitled")
+            source = section.get("source", "Unknown")
 
             split_texts = self.splitter.split_text(content)
 
             for idx, chunk in enumerate(split_texts):
                 chunks.append({
-                    "title": section.get("title", "Untitled"),
-                    "chunk_id": f"{section.get('title', 'Untitled').replace(' ', '_')}_{idx+1}",
-                    "text": chunk
+                    "title": title,
+                    "chunk_id": f"{title.replace(' ', '_')}_{idx+1}",
+                    "text": chunk,
+                    "source": source
                 })
         return chunks
 
@@ -63,7 +64,7 @@ class Chunker:
         document = self.load_json(filepath)
 
         if document is None:
-            print(f"⚠️ Skipped {filename} due to loading error")
+            print(f"⚠️ Skipped {filename} due to loading error.")
             return
 
         chunks = self.chunk_document(document)
@@ -73,7 +74,6 @@ class Chunker:
         files = [f for f in os.listdir(self.input_dir) if f.endswith(".json")]
         for file in files:
             self.process_file(file)
-
 
 if __name__ == "__main__":
     chunker = Chunker()

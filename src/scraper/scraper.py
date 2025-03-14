@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import logging
 from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -8,14 +9,21 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
+# Setup logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
 class MinecraftWikiScraper:
     BASE_URL = "https://minecraft.wiki/w/"
 
-    # Pages that contain the full versions of important tables
-    TABLE_PRIORITY_PAGES = {
-        "Achievements": "Achievements",
-        "Advancements": "Advancements",
-        "Enchantments": "Enchanting"
+    # Pages where we need to extract tables
+    TABLE_SCRAPING_PAGES = {
+        "Achievements",
+        "Advancements",
+        "Enchanting",
+        "Potion_Brewing",
+        "Mobs",
+        "Blocks",
+        "Items"
     }
 
     def __init__(self, topic, max_retries=3):
@@ -29,7 +37,7 @@ class MinecraftWikiScraper:
             "url": self.url,
             "title": topic,
             "sections": [],
-            "tables": [],
+            "tables": [] if topic in self.TABLE_SCRAPING_PAGES else None,  # Only scrape tables for specific pages
             "last_updated": str(datetime.now(timezone.utc)),
         }
         self.max_retries = max_retries
@@ -47,22 +55,28 @@ class MinecraftWikiScraper:
         service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=options)
 
-        print(f"🚀 Fetching: {self.url} using Selenium...")
+        logging.info(f"🚀 Fetching: {self.url} using Selenium...")
         driver.get(self.url)
         time.sleep(5)  # Allow page to fully load
         page_source = driver.page_source
         driver.quit()
 
-        print("✅ Successfully fetched page with Selenium.")
+        logging.info("✅ Successfully fetched page with Selenium.")
         return BeautifulSoup(page_source, "html.parser")
 
     def extract_tables(self, soup):
         """
-        Extracts tables from the page and stores them as structured JSON.
-        Avoids redundant tables if a full version exists elsewhere.
+        Extracts tables from the page ONLY for specific pages.
         """
+        if self.topic not in self.TABLE_SCRAPING_PAGES:
+            return  # Skip table extraction for other pages
+
         content = soup.find("div", {"class": "mw-parser-output"})
-        tables = content.find_all("table", {"class": "wikitable"})  # Extract only 'wikitable' tables
+        if not content:
+            logging.warning(f"⚠️ No content found for {self.topic}")
+            return
+
+        tables = content.find_all("table", {"class": "wikitable"})
 
         current_section = None  # To track which section the table belongs to
 
@@ -71,10 +85,9 @@ class MinecraftWikiScraper:
                 current_section = element.get_text(strip=True).replace("[edit | edit source]", "")
 
             if element.name == "table":
-                # Skip redundant tables if the full version exists on another page
-                if current_section in self.TABLE_PRIORITY_PAGES and self.TABLE_PRIORITY_PAGES[current_section] != self.topic:
-                    print(f"⚠️ Skipping {current_section} table on {self.topic}, full table exists on {self.TABLE_PRIORITY_PAGES[current_section]}")
-                    continue
+                # Get table title from <caption>, else use closest section heading
+                table_title = element.find("caption")
+                table_title = table_title.get_text(strip=True) if table_title else (current_section or "Unknown Table")
 
                 headers = [th.get_text(strip=True) for th in element.find_all("th")]
                 rows = []
@@ -86,10 +99,11 @@ class MinecraftWikiScraper:
 
                 if headers and rows:
                     self.data["tables"].append({
-                        "section": current_section,  # Associate table with its heading
+                        "title": table_title,
                         "headers": headers,
                         "rows": rows
                     })
+                    logging.info(f"📋 Extracted table: {table_title} (Rows: {len(rows)})")
 
     def parse_sections(self, soup):
         """
@@ -97,7 +111,8 @@ class MinecraftWikiScraper:
         """
         content = soup.find("div", {"class": "mw-parser-output"})
         if not content:
-            raise Exception("Could not find main content div")
+            logging.warning(f"⚠️ No content found for {self.topic}")
+            return
 
         current_section = None
         for element in content.find_all(["h2", "h3", "p", "ul", "ol"]):
@@ -126,22 +141,26 @@ class MinecraftWikiScraper:
         filename = f"{folder}/{self.topic}.json"
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=4, ensure_ascii=False)
-        print(f"✅ Data saved to {filename}")
+        logging.info(f"✅ Data saved to {filename} (Sections: {len(self.data['sections'])}, Tables: {len(self.data['tables']) if self.data['tables'] else 'N/A'})")
 
     def run(self):
         """
         Runs the complete scraping pipeline.
         """
-        print(f"🔍 Scraping: {self.url}")
+        logging.info(f"🔍 Scraping: {self.url}")
         soup = self.fetch_page_with_selenium()
         self.parse_sections(soup)
-        self.extract_tables(soup)  # Extract tables while avoiding redundancy
+        self.extract_tables(soup)  # Extract tables only if the page is in TABLE_SCRAPING_PAGES
         self.save_to_json()
 
 
 # Example usage:
 if __name__ == "__main__":
-    topics = ["Nether_Portal", "Diamond", "Enchanting"]
+    topics = [
+        "Nether_Portal", "Diamond", "Pillager", "Enchanting",
+        "Achievements", "Advancements", "Bow", "Pickaxe",
+        "The_Nether", "The_End"
+    ]
     for topic in topics:
         scraper = MinecraftWikiScraper(topic)
         scraper.run()

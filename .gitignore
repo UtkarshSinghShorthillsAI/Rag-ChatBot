@@ -14,6 +14,7 @@ env/
 data/raw/
 data/processed/
 data/chunked/
+data/chunks/
 data/embeddings/
 data/*.json
 

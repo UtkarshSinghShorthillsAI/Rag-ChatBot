@@ -4,102 +4,138 @@ import re
 
 class Preprocessor:
     def __init__(self, input_folder="data/raw", output_folder="data/processed"):
-        """
-        Initializes the preprocessor with input (raw) and output (cleaned) data paths.
-        """
         self.input_folder = input_folder
         self.output_folder = output_folder
-        os.makedirs(output_folder, exist_ok=True)
+        os.makedirs(self.output_folder, exist_ok=True)
+
+    def load_json(self, filename):
+        try:
+            with open(os.path.join(self.input_folder, filename), "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"❌ Error loading {filename}: {e}")
+            return {}
+
+    def save_json(self, filename, data):
+        try:
+            with open(os.path.join(self.output_folder, filename), "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            print(f"✅ Processed: {filename}")
+        except IOError as e:
+            print(f"❌ Error saving {filename}: {e}")
 
     def clean_text(self, text):
-        """
-        Cleans text by:
-        - Removing wiki artifacts like '[edit | edit source]', '[hide]'
-        - Removing Wikipedia-style references ('Jump up to:', 'See also:')
-        - Normalizing whitespace and newlines
-        - Keeping important Minecraft-related metadata (like '[Java Edition]')
-        """
-        text = re.sub(r"\[edit \| edit source\]", "", text)  # Remove '[edit | edit source]'
-        text = re.sub(r"\[hide\]", "", text)  # Remove '[hide]'
-        text = re.sub(r"Jump up to: .*", "", text)  # Remove 'Jump up to:' wiki references
-        text = re.sub(r"See also: .*", "", text)  # Remove 'See also:' references
-        text = re.sub(r"\s+", " ", text).strip()  # Normalize whitespace
+        if not text:
+            return ""
+
+        patterns = [
+            r"\[edit\s*\|\s*edit source\]",
+            r"\[hide\]",
+            r"Jump up to:.*",
+            r"See also:.*",
+            r"\[.*?\]",
+            r"↑",
+            r"\s+"
+        ]
+
+        for pattern in patterns[:-1]:
+            text = re.sub(pattern, "", text, flags=re.IGNORECASE)
+        text = re.sub(patterns[-1], " ", text).strip()
+
         return text
 
-    def clean_heading(self, heading):
-        """
-        Cleans headings by removing '[edit | edit source]'.
-        """
-        return self.clean_text(heading)
+    def filter_sections(self, sections):
+        unwanted_headings = {"Gallery", "References", "Navigation", "Contents", "Issues",
+                             "Achievements", "Sounds", "History", "Advancements"}
+        cleaned_sections = []
 
-    def clean_table(self, table):
-        """
-        Cleans table headers and removes unnecessary artifacts.
-        Also removes empty rows and invalid headers.
-        """
-        cleaned_headers = [self.clean_text(header) for header in table["headers"]]
-        cleaned_rows = [
+        for section in sections:
+            heading = self.clean_text(section.get("heading", ""))
+            if not heading or any(uw.lower() in heading.lower() for uw in unwanted_headings):
+                continue
+
+            section_text = self.clean_text(section.get("text", ""))
+            subsections = []
+            for sub in section.get("subsections", []):
+                subheading = self.clean_text(sub.get("subheading", ""))
+                subtext = self.clean_text(sub.get("text", ""))
+                if subheading or subtext:
+                    subsections.append({"subheading": subheading, "text": subtext})
+
+            if section_text.strip() or subsections:
+                cleaned_sections.append({
+                    "heading": heading,
+                    "text": section_text,
+                    "subsections": subsections
+                })
+
+        return cleaned_sections
+
+    def flatten_sections(self, sections, parent_heading=""):
+        flattened = []
+        for section in sections:
+            heading = section.get("heading", "")
+            full_heading = f"{parent_heading} - {heading}" if parent_heading else heading
+
+            section_text = section.get("text", "")
+            if section_text:
+                flattened.append({"title": full_heading, "content": section_text})
+
+            subsections = section.get("subsections", [])
+            flattened.extend(self.flatten_sections(subsections, full_heading))
+
+        return flattened
+
+    def clean_table(self, table, page_title=""):
+        section = self.clean_text(table.get("section", ""))
+        headers = [self.clean_text(h) for h in table.get("headers", []) if h.strip()]
+        rows = [
             {self.clean_text(k): self.clean_text(v) for k, v in row.items() if v.strip()}
-            for row in table["rows"]
+            for row in table.get("rows", []) if any(v.strip() for v in row.values())
         ]
-        # Remove tables that have only empty or meaningless headers
-        if not cleaned_headers or not cleaned_rows:
-            return None
-        return {"headers": cleaned_headers, "rows": cleaned_rows}
 
-    def process_file(self, filename):
-        """
-        Cleans a single JSON file and saves the processed data.
-        """
-        input_path = os.path.join(self.input_folder, filename)
-        output_path = os.path.join(self.output_folder, filename)
+        if not headers or not rows:
+            return []
 
-        with open(input_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        if not section:
+            section = f"{page_title.capitalize()} Table"
 
-        # Remove unwanted sections (Navigation, References, Issues, and Contents)
-        unwanted_sections = {"Navigation", "References", "Issues", "Contents"}
-        data["sections"] = [sec for sec in data["sections"] if sec["heading"] not in unwanted_sections]
+        flattened_rows = []
+        for row in rows:
+            row_content = "; ".join(f"{key}: {value}" for key, value in row.items())
+            flattened_rows.append({"title": section, "content": row_content})
 
-        # Clean headings and text
-        for section in data["sections"]:
-            section["heading"] = self.clean_heading(section["heading"])
-            section["text"] = self.clean_text(section["text"])
+        return flattened_rows
 
-            # Clean subsections
-            section["subsections"] = [
-                {"subheading": self.clean_heading(sub["subheading"]), "text": self.clean_text(sub["text"])}
-                for sub in section["subsections"]
-                if sub["text"].strip()
-            ]
+    def preprocess_file(self, filename):
+        print(f"🔍 Processing {filename}")
+        data = self.load_json(filename)
 
-        # Remove empty sections after processing
-        data["sections"] = [sec for sec in data["sections"] if sec["text"].strip() or sec["subsections"]]
+        page_title = data.get("title", "").strip()
+        source_url = data.get("url", "").strip()  # Extract source URL here
 
-        # Clean tables and remove invalid ones
-        data["tables"] = [t for t in (self.clean_table(table) for table in data["tables"]) if t]
+        flattened_data = []
 
-        # Trim overly large history tables (keeping only relevant information)
-        for section in data["sections"]:
-            if "History" in section["heading"]:
-                section["text"] = "\n".join(section["text"].split("\n")[:5])  # Keep only the first 5 lines
+        if "sections" in data:
+            cleaned_sections = self.filter_sections(data["sections"])
+            flattened_data.extend(self.flatten_sections(cleaned_sections))
 
-        # Save cleaned JSON
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+        if "tables" in data and isinstance(data["tables"], list):
+            for table in data["tables"]:
+                flattened_data.extend(self.clean_table(table, page_title))
 
-        print(f"✅ Processed: {filename}")
+        # Add source URL to each chunk
+        for chunk in flattened_data:
+            chunk["source"] = source_url
+
+        self.save_json(filename, flattened_data)
 
     def run(self):
-        """
-        Runs the preprocessing pipeline on all raw JSON files.
-        """
         files = [f for f in os.listdir(self.input_folder) if f.endswith(".json")]
         for file in files:
-            self.process_file(file)
+            self.preprocess_file(file)
 
 
-# Example usage:
 if __name__ == "__main__":
     preprocessor = Preprocessor()
     preprocessor.run()
