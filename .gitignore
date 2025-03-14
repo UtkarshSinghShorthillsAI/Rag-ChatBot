@@ -11,12 +11,7 @@ env/
 .env
 
 # Ignore raw, processed, and chunked data
-data/raw/
-data/processed/
-data/chunked/
-data/chunks/
-data/embeddings/
-data/*.json
+data/*
 
 # Ignore logs & temporary files
 *.log

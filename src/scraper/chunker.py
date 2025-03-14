@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 class Chunker:
@@ -49,10 +50,11 @@ class Chunker:
 
             split_texts = self.splitter.split_text(content)
 
-            for idx, chunk in enumerate(split_texts):
+            for chunk in split_texts:
+                unique_id = uuid.uuid4().hex[:8]
                 chunks.append({
                     "title": title,
-                    "chunk_id": f"{title.replace(' ', '_')}_{idx+1}",
+                    "chunk_id": f"{title.replace(' ', '_')}_{unique_id}",
                     "text": chunk,
                     "source": source
                 })
