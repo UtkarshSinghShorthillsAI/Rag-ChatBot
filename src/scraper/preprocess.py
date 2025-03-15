@@ -7,6 +7,8 @@ class Preprocessor:
         self.input_folder = input_folder
         self.output_folder = output_folder
         os.makedirs(self.output_folder, exist_ok=True)
+        # Define unwanted table titles/sections
+        self.irrelevant_table_keywords = {"history", "navigation"}
 
     def load_json(self, filename):
         try:
@@ -27,7 +29,6 @@ class Preprocessor:
     def clean_text(self, text):
         if not text:
             return ""
-
         patterns = [
             r"\[edit\s*\|\s*edit source\]",
             r"\[hide\]",
@@ -37,31 +38,33 @@ class Preprocessor:
             r"↑",
             r"\s+"
         ]
-
         for pattern in patterns[:-1]:
             text = re.sub(pattern, "", text, flags=re.IGNORECASE)
         text = re.sub(patterns[-1], " ", text).strip()
-
         return text
 
     def filter_sections(self, sections):
-        unwanted_headings = {"Gallery", "References", "Navigation", "Contents", "Issues",
-                             "Achievements", "Sounds", "History", "Advancements"}
+        unwanted_headings = {"Gallery", "References", "Issues", "Achievements", "Sounds", "Advancements", 
+                             "Contents", "Navigation", "History", "See Also"}
         cleaned_sections = []
 
         for section in sections:
-            heading = self.clean_text(section.get("heading", ""))
+            # Use "heading" if available; if not, check for "subheading"
+            heading = self.clean_text(section.get("heading", section.get("subheading", "")))
             if not heading or any(uw.lower() in heading.lower() for uw in unwanted_headings):
                 continue
 
             section_text = self.clean_text(section.get("text", ""))
             subsections = []
             for sub in section.get("subsections", []):
-                subheading = self.clean_text(sub.get("subheading", ""))
-                subtext = self.clean_text(sub.get("text", ""))
-                if subheading or subtext:
-                    subsections.append({"subheading": subheading, "text": subtext})
-
+                sub_heading = self.clean_text(sub.get("subheading", ""))
+                sub_text = self.clean_text(sub.get("text", ""))
+                if sub_heading or sub_text:
+                    subsections.append({
+                        "subheading": sub_heading,
+                        "text": sub_text,
+                        "subsections": sub.get("subsections", [])
+                    })
             if section_text.strip() or subsections:
                 cleaned_sections.append({
                     "heading": heading,
@@ -72,61 +75,100 @@ class Preprocessor:
         return cleaned_sections
 
     def flatten_sections(self, sections, parent_heading=""):
+        """
+        Flattens the nested sections into a list of dicts,
+        each with { 'title': ..., 'content': ..., 'is_table': False }.
+        """
         flattened = []
         for section in sections:
-            heading = section.get("heading", "")
-            full_heading = f"{parent_heading} - {heading}" if parent_heading else heading
+            current_heading = section.get("heading") or section.get("subheading", "")
+            full_heading = (f"{parent_heading} - {current_heading}"
+                            if parent_heading and current_heading
+                            else current_heading or parent_heading)
 
             section_text = section.get("text", "")
-            if section_text:
-                flattened.append({"title": full_heading, "content": section_text})
+            if section_text.strip():
+                # Mark normal text sections as is_table=False
+                flattened.append({
+                    "title": full_heading,
+                    "content": section_text,
+                    "is_table": False
+                })
 
-            subsections = section.get("subsections", [])
-            flattened.extend(self.flatten_sections(subsections, full_heading))
-
+            subs = section.get("subsections", [])
+            if subs:
+                flattened.extend(self.flatten_sections(subs, full_heading))
         return flattened
 
     def clean_table(self, table, page_title=""):
+        """
+        Flattens a table into row-based chunks,
+        each chunk will have 'is_table': True so the chunker can handle differently.
+        """
+        table_title = self.clean_text(table.get("title", ""))
         section = self.clean_text(table.get("section", ""))
-        headers = [self.clean_text(h) for h in table.get("headers", []) if h.strip()]
-        rows = [
-            {self.clean_text(k): self.clean_text(v) for k, v in row.items() if v.strip()}
-            for row in table.get("rows", []) if any(v.strip() for v in row.values())
-        ]
+        if not table_title:
+            table_title = section if section else f"{page_title.capitalize()} Table"
 
-        if not headers or not rows:
+        # Filter out irrelevant tables based on keywords (e.g., History, Navigation)
+        if any(kw in table_title.lower() for kw in self.irrelevant_table_keywords) or \
+           any(kw in section.lower() for kw in self.irrelevant_table_keywords):
             return []
 
-        if not section:
-            section = f"{page_title.capitalize()} Table"
-
+        headers = [self.clean_text(h) for h in table.get("headers", []) if h.strip()]
+        rows = table.get("rows", [])
         flattened_rows = []
-        for row in rows:
-            row_content = "; ".join(f"{key}: {value}" for key, value in row.items())
-            flattened_rows.append({"title": section, "content": row_content})
 
+        for row in rows:
+            if headers:
+                row_values = []
+                for header in headers:
+                    value = self.clean_text(row.get(header, ""))
+                    if value:
+                        row_values.append(f"{header}: {value}")
+                if not row_values:
+                    row_values = [
+                        f"{self.clean_text(k)}: {self.clean_text(v)}"
+                        for k, v in row.items() if self.clean_text(v)
+                    ]
+            else:
+                row_values = [
+                    f"{self.clean_text(k)}: {self.clean_text(v)}"
+                    for k, v in row.items() if self.clean_text(v)
+                ]
+
+            if row_values:
+                row_content = "; ".join(row_values)
+                # Mark table rows as is_table=True
+                flattened_rows.append({
+                    "title": table_title,
+                    "content": row_content,
+                    "is_table": True
+                })
         return flattened_rows
 
     def preprocess_file(self, filename):
         print(f"🔍 Processing {filename}")
         data = self.load_json(filename)
 
-        page_title = data.get("title", "").strip()
-        source_url = data.get("url", "").strip()  # Extract source URL here
+        page_title = self.clean_text(data.get("title", ""))
+        source_url = self.clean_text(data.get("url", ""))
 
         flattened_data = []
 
+        # Flatten normal text sections
         if "sections" in data:
             cleaned_sections = self.filter_sections(data["sections"])
             flattened_data.extend(self.flatten_sections(cleaned_sections))
 
+        # Flatten table data
         if "tables" in data and isinstance(data["tables"], list):
             for table in data["tables"]:
                 flattened_data.extend(self.clean_table(table, page_title))
 
-        # Add source URL to each chunk
+        # Add source info to each chunk
         for chunk in flattened_data:
-            chunk["source"] = source_url
+            chunk["source"] = source_url if source_url else page_title
 
         self.save_json(filename, flattened_data)
 
@@ -134,7 +176,6 @@ class Preprocessor:
         files = [f for f in os.listdir(self.input_folder) if f.endswith(".json")]
         for file in files:
             self.preprocess_file(file)
-
 
 if __name__ == "__main__":
     preprocessor = Preprocessor()

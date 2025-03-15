@@ -82,17 +82,23 @@ class MinecraftWikiScraper:
 
         for element in content.find_all(["h2", "h3", "table"]):
             if element.name in ["h2", "h3"]:  # Track section headings
-                current_section = element.get_text(strip=True).replace("[edit | edit source]", "")
+                heading_text = element.get_text(strip=True).replace("[edit | edit source]", "")
+                current_section = heading_text
 
             if element.name == "table":
                 # Get table title from <caption>, else use closest section heading
                 table_title = element.find("caption")
-                table_title = table_title.get_text(strip=True) if table_title else (current_section or "Unknown Table")
+                if table_title:
+                    table_title = table_title.get_text(strip=True)
+                else:
+                    table_title = current_section or "Unknown Table"
 
                 headers = [th.get_text(strip=True) for th in element.find_all("th")]
                 rows = []
 
-                for row in element.find_all("tr")[1:]:  # Skip the header row
+                # Skip the first row if it’s obviously headers
+                tr_list = element.find_all("tr")
+                for row in tr_list[1:]:
                     columns = [td.get_text(strip=True) for td in row.find_all("td")]
                     if columns:
                         rows.append(dict(zip(headers, columns)))  # Create row as dictionary
@@ -107,31 +113,81 @@ class MinecraftWikiScraper:
 
     def parse_sections(self, soup):
         """
-        Extracts structured sections from the page.
+        Extracts structured sections from the page, capturing:
+        - Exactly one 'Introduction' paragraph after skipping any hatnotes or figures.
+        - Remaining content as normal sections.
         """
         content = soup.find("div", {"class": "mw-parser-output"})
         if not content:
             logging.warning(f"⚠️ No content found for {self.topic}")
             return
 
+        # 1) First, find and store exactly one real paragraph (Introduction),
+        #    skipping hatnotes/figures/etc. at the top.
+        intro_paragraph = ""
+        for child in content.children:
+            # Skip anything that isn't a Tag (e.g. NavigableString)
+            if not child.name:
+                continue
+
+            # If it's a hatnote or figure, skip it
+            if child.name == "div" and "hatnote" in (child.get("class") or []):
+                continue
+            if child.name == "figure":
+                continue
+
+            # The first <p> we see is our introduction
+            if child.name == "p":
+                intro_paragraph = child.get_text(separator=" ").strip()
+                # Remove this <p> so we don't parse it again below
+                child.decompose()
+                break
+
+        # If we found an intro paragraph, store it as "Introduction"
+        if intro_paragraph:
+            self.data["sections"].append({
+                "heading": "Introduction",
+                "text": intro_paragraph,
+                "subsections": []
+            })
+
+        # 2) Now parse the rest of the sections as before
         current_section = None
         for element in content.find_all(["h2", "h3", "p", "ul", "ol"]):
             if element.name == "h2":
+                # Close off any previous section
                 if current_section:
-                    self.data["sections"].append(current_section)  # Store previous section
-                current_section = {"heading": element.text.strip(), "text": "", "subsections": []}
+                    self.data["sections"].append(current_section)
+
+                # Start a new section
+                heading_text = element.text.strip().replace("[edit | edit source]", "")
+                current_section = {
+                    "heading": heading_text,
+                    "text": "",
+                    "subsections": []
+                }
+
             elif element.name == "h3":
                 if current_section:
-                    current_section["subsections"].append({"subheading": element.text.strip(), "text": ""})
-            elif element.name in ["p", "ul", "ol"]:
-                if current_section:
-                    if current_section["subsections"]:
-                        current_section["subsections"][-1]["text"] += element.get_text(separator=" ").strip() + " "
-                    else:
-                        current_section["text"] += element.get_text(separator=" ").strip() + " "
+                    subheading_text = element.text.strip().replace("[edit | edit source]", "")
+                    current_section["subsections"].append({
+                        "subheading": subheading_text,
+                        "text": ""
+                    })
 
-        if current_section:  # Add last parsed section
+            elif element.name in ["p", "ul", "ol"]:
+                text_content = element.get_text(separator=" ").strip() + " "
+                if current_section:
+                    # If there's a sub-section, append text to the last sub-section
+                    if current_section["subsections"]:
+                        current_section["subsections"][-1]["text"] += text_content
+                    else:
+                        current_section["text"] += text_content
+
+        # If there's a leftover current_section, append it
+        if current_section:
             self.data["sections"].append(current_section)
+
 
     def save_to_json(self, folder="data/raw"):
         """
@@ -141,7 +197,8 @@ class MinecraftWikiScraper:
         filename = f"{folder}/{self.topic}.json"
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=4, ensure_ascii=False)
-        logging.info(f"✅ Data saved to {filename} (Sections: {len(self.data['sections'])}, Tables: {len(self.data['tables']) if self.data['tables'] else 'N/A'})")
+        table_count = len(self.data["tables"]) if self.data["tables"] else 0
+        logging.info(f"✅ Data saved to {filename} (Sections: {len(self.data['sections'])}, Tables: {table_count})")
 
     def run(self):
         """
@@ -159,8 +216,9 @@ if __name__ == "__main__":
     topics = [
         "Nether_Portal", "Diamond", "Pillager", "Enchanting",
         "Achievements", "Advancements", "Bow", "Pickaxe",
-        "The_Nether", "The_End"
+        "The_Nether", "The_End", "Piglin"
     ]
-    for topic in topics:
+    topics2 = ["Piglin"]
+    for topic in topics2:
         scraper = MinecraftWikiScraper(topic)
         scraper.run()
