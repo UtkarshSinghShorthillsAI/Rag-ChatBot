@@ -39,10 +39,10 @@ class VectorStore:
             chunk_id = entry["chunk_id"]
             vector = entry["embedding"]
             document = entry["text"]
-            print(f"📌 Chunk ID: {chunk_id}")
-            print(f"🔹 Text: {document[:100]}...")  # Print first 100 chars of text
-            print(f"🔹 Source: {entry.get('source', '❌ MISSING')}")
-            print("-" * 40)
+            # print(f"📌 Chunk ID: {chunk_id}")
+            # print(f"🔹 Text: {document[:100]}...")  # Print first 100 chars of text
+            # print(f"🔹 Source: {entry.get('source', '❌ MISSING')}")
+            # print("-" * 40)
 
             metadata = {
                 "title": entry["title"],
