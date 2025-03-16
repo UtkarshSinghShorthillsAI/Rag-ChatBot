@@ -28,6 +28,7 @@ chromedriver.log
 
 # Ignore Jupyter Notebook Checkpoints (if used)
 .ipynb_checkpoints/
+notebooks/
 
 # Ignore Dependency Management Files (Optional)
 Pipfile
