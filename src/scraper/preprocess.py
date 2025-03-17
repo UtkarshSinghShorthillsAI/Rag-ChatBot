@@ -44,7 +44,7 @@ class Preprocessor:
         return text
 
     def filter_sections(self, sections):
-        unwanted_headings = {"Gallery", "References", "Issues", "Achievements", "Sounds", "Advancements", 
+        unwanted_headings = {"Gallery", "References", "Issues", "Achievements", "Sounds", "Advancements",
                              "Contents", "Navigation", "History", "See Also"}
         cleaned_sections = []
 
@@ -88,7 +88,6 @@ class Preprocessor:
 
             section_text = section.get("text", "")
             if section_text.strip():
-                # Mark normal text sections as is_table=False
                 flattened.append({
                     "title": full_heading,
                     "content": section_text,
@@ -103,7 +102,7 @@ class Preprocessor:
     def clean_table(self, table, page_title=""):
         """
         Flattens a table into row-based chunks,
-        each chunk will have 'is_table': True so the chunker can handle differently.
+        each chunk will have 'is_table': True so the chunker can handle it differently.
         """
         table_title = self.clean_text(table.get("title", ""))
         section = self.clean_text(table.get("section", ""))
@@ -139,13 +138,35 @@ class Preprocessor:
 
             if row_values:
                 row_content = "; ".join(row_values)
-                # Mark table rows as is_table=True
                 flattened_rows.append({
                     "title": table_title,
                     "content": row_content,
                     "is_table": True
                 })
         return flattened_rows
+
+    def simplify_crafting_recipe(self, recipe):
+        """
+        Simplifies the crafting_recipe field into a consistent chunk.
+        The ingredients are cleaned and the grid_cleaned (if available) is formatted.
+        The formatted grid shows each row on a new line with cells enclosed in square brackets.
+        """
+        ingredients = self.clean_text(recipe.get("ingredients", ""))
+        grid_cleaned = recipe.get("grid_cleaned")
+        grid_text = ""
+        if isinstance(grid_cleaned, list):
+            # Convert each row (list) into a string, each cell within square brackets
+            grid_text = "\n".join([" ".join([f"[ {cell} ]" if cell else "[    ]" for cell in row])
+                                   for row in grid_cleaned])
+        elif isinstance(recipe.get("grid_raw"), str):
+            grid_text = self.clean_text(recipe.get("grid_raw"))
+        
+        content = f"Ingredients: {ingredients}\nCrafting Grid:\n{grid_text}"
+        return {
+            "title": "Crafting Recipe",
+            "content": content,
+            "is_table": False
+        }
 
     def preprocess_file(self, filename):
         print(f"🔍 Processing {filename}")
@@ -165,6 +186,11 @@ class Preprocessor:
         if "tables" in data and isinstance(data["tables"], list):
             for table in data["tables"]:
                 flattened_data.extend(self.clean_table(table, page_title))
+
+        # Process crafting_recipe as a separate chunk if present
+        if "crafting_recipe" in data and data["crafting_recipe"]:
+            recipe_chunk = self.simplify_crafting_recipe(data["crafting_recipe"])
+            flattened_data.append(recipe_chunk)
 
         # Add source info to each chunk
         for chunk in flattened_data:
