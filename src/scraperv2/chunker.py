@@ -46,7 +46,7 @@ class Chunker:
         except Exception as e:
             logging.error(f"❌ Error saving chunks for {filename}: {e}")
 
-    def chunk_document(self, document):
+    def chunk_document(self, document, page_title=""):
         chunks = []
 
         for section in document:
@@ -55,15 +55,20 @@ class Chunker:
             source = section.get("source", "Unknown")
             is_table = section.get("is_table", False)  # from preprocessor, default False
 
-            # We want to prepend the title to the content for each chunk
-            # so that the chunk text = title + \n\n + actual text.
-            # If is_table: keep as single chunk
+            # For crafting recipe chunks, prepend the page title to the section title.
+            # Compare lowercased and stripped title for equality.
+            if title.strip().lower() == "crafting recipe":
+                display_title = f"{page_title} - Crafting Recipe"
+            else:
+                display_title = title
+
+            # Prepend the title to content for each chunk
             if is_table:
                 unique_id = uuid.uuid4().hex[:8]
-                chunk_text = f"{title}\n\n{content}"
+                chunk_text = f"{display_title}\n\n{content}"
                 chunks.append({
-                    "title": title,
-                    "chunk_id": f"{title.replace(' ', '_')}_{unique_id}",
+                    "title": display_title,
+                    "chunk_id": f"{display_title.replace(' ', '_')}_{unique_id}",
                     "text": chunk_text,
                     "source": source
                 })
@@ -71,22 +76,22 @@ class Chunker:
                 # Non-table section
                 if len(content) <= self.chunk_size:
                     unique_id = uuid.uuid4().hex[:8]
-                    chunk_text = f"{title}\n\n{content}"
+                    chunk_text = f"{display_title}\n\n{content}"
                     chunks.append({
-                        "title": title,
-                        "chunk_id": f"{title.replace(' ', '_')}_{unique_id}",
+                        "title": display_title,
+                        "chunk_id": f"{display_title.replace(' ', '_')}_{unique_id}",
                         "text": chunk_text,
                         "source": source
                     })
                 else:
                     # Split with RecursiveCharacterTextSplitter
                     split_texts = self.splitter.split_text(content)
-                    for chunk in split_texts:
+                    for sub_chunk in split_texts:
                         unique_id = uuid.uuid4().hex[:8]
-                        chunk_text = f"{title}\n\n{chunk}"
+                        chunk_text = f"{display_title}\n\n{sub_chunk}"
                         chunks.append({
-                            "title": title,
-                            "chunk_id": f"{title.replace(' ', '_')}_{unique_id}",
+                            "title": display_title,
+                            "chunk_id": f"{display_title.replace(' ', '_')}_{unique_id}",
                             "text": chunk_text,
                             "source": source
                         })
@@ -109,7 +114,10 @@ class Chunker:
             logging.warning(f"⚠️ Skipped {filename} due to loading error.")
             return
 
-        chunks = self.chunk_document(document)
+        # Derive page_title from filename, e.g., "Iron_Axe.json" -> "Iron Axe"
+        page_title = filename.rsplit(".", 1)[0].replace("_", " ")
+
+        chunks = self.chunk_document(document, page_title)
         self.save_chunks(filename, chunks)
 
     def run(self):

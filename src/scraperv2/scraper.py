@@ -85,7 +85,11 @@ class MinecraftWikiScraper:
                 break
 
         if intro_paragraph:
-            sections.append({"heading": "Introduction", "text": intro_paragraph, "subsections": []})
+            sections.append({
+                "heading": "Introduction",
+                "text": intro_paragraph,
+                "subsections": []
+            })
 
         current_section = None
         for element in content.find_all(["h2", "h3", "p", "ul", "ol"]):
@@ -94,12 +98,10 @@ class MinecraftWikiScraper:
                     sections.append(current_section)
                 heading_text = element.text.strip().replace("[edit | edit source]", "")
                 current_section = {"heading": heading_text, "text": "", "subsections": []}
-
             elif element.name == "h3":
                 if current_section:
                     subheading_text = element.text.strip().replace("[edit | edit source]", "")
                     current_section["subsections"].append({"subheading": subheading_text, "text": ""})
-
             elif element.name in ["p", "ul", "ol"]:
                 text_content = element.get_text(separator=" ").strip() + " "
                 if current_section:
@@ -147,30 +149,93 @@ class MinecraftWikiScraper:
                         rows.append(dict(zip(headers, columns)))
 
                 if headers and rows:
-                    tables.append({"title": table_title, "headers": headers, "rows": rows})
+                    tables.append({
+                        "title": table_title,
+                        "headers": headers,
+                        "rows": rows
+                    })
                     logging.info(f"📋 Extracted table: {table_title} (Rows: {len(rows)})")
-
         return tables
 
-    def save_to_json(self, topic, sections, tables):
+    def extract_crafting_recipe(self, soup):
+        """
+        Extracts the crafting recipe table if it exists.
+        Looks for a <span> with id 'Crafting' within an <h3>, then extracts the subsequent table
+        whose data-description contains 'crafting recipes'.
+        Uses parse_crafting_grid() to produce a cleaned, structured grid.
+        Returns a dictionary with recipe details or None if not found.
+        """
+        crafting_span = soup.find("span", id="Crafting")
+        if crafting_span:
+            crafting_heading = crafting_span.find_parent("h3")
+            if crafting_heading:
+                table = crafting_heading.find_next_sibling("table", class_="wikitable collapsible")
+                if table and "crafting recipes" in table.get("data-description", "").lower():
+                    rows = table.find_all("tr")
+                    if len(rows) >= 2:
+                        cells = rows[1].find_all("td")
+                        if len(cells) >= 2:
+                            ingredients = cells[0].get_text(separator=" ").strip()
+                            grid_html = str(cells[1])
+                            grid_cleaned = self.parse_crafting_grid(grid_html)
+                            logging.info("🔍 Crafting recipe found and extracted.")
+                            return {
+                                "ingredients": ingredients,
+                                "grid_raw": grid_html,
+                                "grid_cleaned": grid_cleaned
+                            }
+        logging.info("ℹ️ No crafting recipe table found on this page.")
+        return None
+
+    def parse_crafting_grid(self, grid_html):
+        """
+        Parses the raw grid HTML for a crafting recipe.
+        First attempts to use the "data-minetip-title" attribute,
+        and if that is not available, falls back to the <a> tag's "title" attribute.
+        Returns a list of rows, where each row is a list of ingredient names.
+        """
+        grid_soup = BeautifulSoup(grid_html, "html.parser")
+        grid = []
+        # Find all rows using the 'mcui-row' class.
+        rows = grid_soup.find_all("span", class_="mcui-row")
+        for row_div in rows:
+            row = []
+            # Each cell is contained in a span with class "invslot".
+            cells = row_div.find_all("span", class_="invslot")
+            for cell in cells:
+                element = cell.find(attrs={"data-minetip-title": True})
+                if element:
+                    ingredient = element["data-minetip-title"]
+                else:
+                    a_tag = cell.find("a")
+                    if a_tag and a_tag.get("title"):
+                        ingredient = a_tag["title"]
+                    else:
+                        ingredient = ""
+                row.append(ingredient)
+            grid.append(row)
+        return grid
+
+    def save_to_json(self, topic, sections, tables, crafting_recipe=None):
         """
         Saves the extracted data to a JSON file.
+        Includes the crafting_recipe key only if a recipe was found.
         """
         os.makedirs("data/raw", exist_ok=True)
         filename = f"data/raw/{topic}.json"
-
         data = {
             "source": "Minecraft Wiki",
             "url": f"{self.BASE_URL}{topic}",
             "title": topic,
             "sections": sections,
             "tables": tables if topic in self.TABLE_SCRAPING_PAGES else None,
-            "last_updated": str(datetime.now(timezone.utc)),
+            "last_updated": str(datetime.now(timezone.utc))
         }
+        if crafting_recipe:
+            data["crafting_recipe"] = crafting_recipe
 
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
-
         logging.info(f"✅ Data saved: {filename}")
 
     def run(self):
@@ -179,7 +244,6 @@ class MinecraftWikiScraper:
         """
         for topic in self.topics:
             json_path = f"data/raw/{topic}.json"
-
             # Skip if already scraped
             if os.path.exists(json_path):
                 logging.info(f"⏭️  Skipping {topic} (Already Scraped)")
@@ -189,8 +253,9 @@ class MinecraftWikiScraper:
                 soup = self.fetch_page(topic)
                 sections = self.parse_sections(soup, topic)
                 tables = self.extract_tables(soup, topic)
-                self.save_to_json(topic, sections, tables)
-
+                # Extract crafting recipe (if it exists)
+                crafting_recipe = self.extract_crafting_recipe(soup)
+                self.save_to_json(topic, sections, tables, crafting_recipe)
             except Exception as e:
                 logging.error(f"❌ Error scraping {topic}: {e}")
 

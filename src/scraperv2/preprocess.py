@@ -87,15 +87,12 @@ class Preprocessor:
         section = self.clean_text(table.get("section", ""))
         if not table_title:
             table_title = section if section else f"{page_title.capitalize()} Table"
-
         if any(kw in table_title.lower() for kw in self.irrelevant_table_keywords) or \
            any(kw in section.lower() for kw in self.irrelevant_table_keywords):
             return []
-
         headers = [self.clean_text(h) for h in table.get("headers", []) if h.strip()]
         rows = table.get("rows", [])
         flattened_rows = []
-
         for row in rows:
             if headers:
                 row_values = []
@@ -113,7 +110,6 @@ class Preprocessor:
                     f"{self.clean_text(k)}: {self.clean_text(v)}"
                     for k, v in row.items() if self.clean_text(v)
                 ]
-
             if row_values:
                 row_content = "; ".join(row_values)
                 flattened_rows.append({
@@ -121,31 +117,51 @@ class Preprocessor:
                 })
         return flattened_rows
 
+    def simplify_crafting_recipe(self, recipe):
+        """
+        Simplifies the crafting_recipe field into a consistent chunk.
+        Cleans the ingredients and formats the grid_cleaned into a neat text block.
+        Each row of the grid is on a new line, with cells in square brackets.
+        """
+        ingredients = self.clean_text(recipe.get("ingredients", ""))
+        grid_cleaned = recipe.get("grid_cleaned")
+        grid_text = ""
+        if isinstance(grid_cleaned, list):
+            # Format each row: each cell is enclosed in square brackets
+            grid_text = "\n".join([" ".join([f"[ {cell} ]" if cell else "[    ]" for cell in row])
+                                   for row in grid_cleaned])
+        elif isinstance(recipe.get("grid_raw"), str):
+            grid_text = self.clean_text(recipe.get("grid_raw"))
+        content = f"Ingredients: {ingredients}\nCrafting Grid:\n{grid_text}"
+        return {
+            "title": "Crafting Recipe",
+            "content": content,
+            "is_table": False
+        }
+
     def preprocess_file(self, filename):
         """ Processes a file only if not already processed. """
         processed_filepath = os.path.join(self.output_folder, filename)
         if os.path.exists(processed_filepath):
             logging.info(f"⏩ Skipping {filename}, already processed.")
             return
-
         logging.info(f"🔍 Processing {filename}")
         data = self.load_json(filename)
-
         page_title = self.clean_text(data.get("title", ""))
         source_url = self.clean_text(data.get("url", ""))
-
         flattened_data = []
         if "sections" in data:
             cleaned_sections = self.filter_sections(data["sections"])
             flattened_data.extend(self.flatten_sections(cleaned_sections))
-
         if "tables" in data and isinstance(data["tables"], list):
             for table in data["tables"]:
                 flattened_data.extend(self.clean_table(table, page_title))
-
+        # Process crafting_recipe as a separate chunk if present
+        if "crafting_recipe" in data and data["crafting_recipe"]:
+            recipe_chunk = self.simplify_crafting_recipe(data["crafting_recipe"])
+            flattened_data.append(recipe_chunk)
         for chunk in flattened_data:
             chunk["source"] = source_url if source_url else page_title
-
         self.save_json(filename, flattened_data)
 
     def run(self):
