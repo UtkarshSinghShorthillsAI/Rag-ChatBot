@@ -1,0 +1,8 @@
+query,ground_truth_answer,context_precision,context_precision,context_recall,context_recall,context_overlap,context_overlap,negative_retrieval,negative_retrieval,retrieval_precision
+,,cosine,llm,cosine,llm,rougeL,llm,cosine,llm,llm
+What steps are needed to tame a wolf?,"Right-click a wild wolf with a bone until hearts appear, then it becomes tamed.",8.20622444152832,8.0,8.522064685821533,7.0,0.39215686274509803,7.0,0.0,1.0,7.0
+How to craft an Iron Sword?,Arrange two iron ingots and one stick according to the instructions on minecraft.wiki to craft an Iron Sword.,9.158079624176025,10.0,9.175877571105957,9.0,1.2612612612612615,8.0,0.0,2.0,9.0
+How can I convert a diamond pickaxe to a netherite pickaxe?,"Use a smithing table to combine a diamond pickaxe with a netherite ingot, upgrading it to a netherite pickaxe.",8.981204628944397,9.0,8.731054067611694,7.0,1.5254237288135595,10.0,0.0,3.0,7.0
+What is the process to create a lingering potion?,Brew a splash potion and then add dragon's breath in the brewing stand to create a lingering potion.,8.593987226486206,8.0,8.537997007369995,8.0,1.116279069767442,10.0,0.0,3.0,7.0
+How do I breed bees?,Place flowers near a beehive or bee nest and wait for bees to gather pollen; they will eventually produce a new bee if conditions are met.,8.60834538936615,2.0,8.63660454750061,1.0,0.8029197080291971,2.0,0.0,8.0,8.0
+What is the process to tame a cat?,"Feed stray cats raw fish until they display hearts, at which point they become tamed.",8.341251015663147,2.0,8.146349787712097,7.0,0.3870967741935483,1.0,0.0,3.0,3.0

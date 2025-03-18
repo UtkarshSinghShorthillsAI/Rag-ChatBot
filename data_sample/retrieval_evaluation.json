@@ -1,0 +1,140 @@
+[
+  {
+    "query": "What steps are needed to tame a wolf?",
+    "ground_truth_answer":"Right-click a wild wolf with a bone until hearts appear, then it becomes tamed.",
+    "context_precision": {
+      "cosine": 8.20622444152832,
+      "llm": 8.0
+    },
+    "context_recall": {
+      "cosine": 8.522064685821533,
+      "llm": 7.0
+    },
+    "context_overlap": {
+      "rougeL": 0.39215686274509803,
+      "llm": 7.0
+    },
+    "negative_retrieval": {
+      "cosine": 0.0,
+      "llm": 1.0
+    },
+    "retrieval_precision": {
+      "llm": 7.0
+    }
+  },
+  {
+      "query": "How to craft an Iron Sword?",
+      "ground_truth_answer":"Arrange two iron ingots and one stick according to the instructions on minecraft.wiki to craft an Iron Sword.",
+      "negative_retrieval": {
+        "cosine": 0.0,
+        "llm": 2.0
+      },
+      "context_precision": {
+        "cosine": 9.158079624176025,
+        "llm": 10.0
+      },
+      "context_recall": {
+        "cosine": 9.175877571105957,
+        "llm": 9.0
+      },
+      "context_overlap": {
+        "rougeL": 1.2612612612612615,
+        "llm": 8.0
+      },
+      "retrieval_precision": {
+        "llm": 9.0
+      }
+  },
+  {
+    "query": "How can I convert a diamond pickaxe to a netherite pickaxe?",
+    "ground_truth_answer": "Use a smithing table to combine a diamond pickaxe with a netherite ingot, upgrading it to a netherite pickaxe.",
+    "context_precision": {
+      "cosine": 8.981204628944397,
+      "llm": 9.0
+    },
+    "context_recall": {
+      "cosine": 8.731054067611694,
+      "llm": 7.0
+    },
+    "context_overlap": {
+      "rougeL": 1.5254237288135595,
+      "llm": 10.0
+    },
+    "negative_retrieval": {
+      "cosine": 0.0,
+      "llm": 3.0
+    },
+    "retrieval_precision": {
+      "llm": 7.0
+    }
+  },
+  {
+    "query": "What is the process to create a lingering potion?",
+    "ground_truth_answer": "Brew a splash potion and then add dragon's breath in the brewing stand to create a lingering potion.",
+    "context_precision": {
+      "cosine": 8.593987226486206,
+      "llm": 8.0
+    },
+    "context_recall": {
+      "cosine": 8.537997007369995,
+      "llm": 8.0
+    },
+    "context_overlap": {
+      "rougeL": 1.116279069767442,
+      "llm": 10.0
+    },
+    "negative_retrieval": {
+      "cosine": 0.0,
+      "llm": 3.0
+    },
+    "retrieval_precision": {
+      "llm": 7.0
+    }
+  },
+  {
+    "query": "How do I breed bees?",
+    "ground_truth_answer": "Place flowers near a beehive or bee nest and wait for bees to gather pollen; they will eventually produce a new bee if conditions are met.",
+    "context_recall": {
+      "cosine": 8.63660454750061,
+      "llm": 1.0
+    },
+    "context_precision": {
+      "cosine": 8.60834538936615,
+      "llm": 2.0
+    },
+    "context_overlap": {
+      "rougeL": 0.8029197080291971,
+      "llm": 2.0
+    },
+    "negative_retrieval": {
+      "cosine": 0.0,
+      "llm": 8.0
+    },
+    "retrieval_precision": {
+      "llm": 8.0
+    }
+  },
+  {
+    "query": "What is the process to tame a cat?",
+    "ground_truth_answer": "Feed stray cats raw fish until they display hearts, at which point they become tamed.",
+    "context_recall": {
+      "cosine": 8.146349787712097,
+      "llm": 7.0
+    },
+    "context_precision": {
+      "cosine": 8.341251015663147,
+      "llm": 2.0
+    },
+    "context_overlap": {
+      "rougeL": 0.3870967741935483,
+      "llm": 1.0
+    },
+    "negative_retrieval": {
+      "cosine": 0.0,
+      "llm": 3.0
+    },
+    "retrieval_precision": {
+    "llm": 3.0
+  }
+  }
+]

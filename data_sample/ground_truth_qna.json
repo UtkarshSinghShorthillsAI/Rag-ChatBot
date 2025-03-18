@@ -1,0 +1,26 @@
+[
+    {
+        "question": "What steps are needed to tame a wolf?",
+        "answer": "Right-click a wild wolf with a bone until hearts appear, then it becomes tamed."
+    },
+    {
+        "question": "How to craft an Iron Sword?",
+        "answer": "Arrange two iron ingots and one stick according to the instructions on minecraft.wiki to craft an Iron Sword."
+    },
+    {
+        "question": "How can I convert a diamond pickaxe to a netherite pickaxe?",
+        "answer": "Use a smithing table to combine a diamond pickaxe with a netherite ingot, upgrading it to a netherite pickaxe."
+    },
+    {
+        "question": "What is the process to create a lingering potion?",
+        "answer": "Brew a splash potion and then add dragon's breath in the brewing stand to create a lingering potion."
+    },
+    {
+        "question": "How do I breed bees?",
+        "answer": "Place flowers near a beehive or bee nest and wait for bees to gather pollen; they will eventually produce a new bee if conditions are met."
+    },
+    {
+        "question": "What is the process to tame a cat?",
+        "answer": "Feed stray cats raw fish until they display hearts, at which point they become tamed."
+    }
+]

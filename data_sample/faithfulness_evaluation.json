@@ -1,0 +1,62 @@
+[
+  {
+    "query": "What steps are needed to tame a wolf?",
+    "generated_answer": "Feed a wolf bones.  The number of bones required is random; each bone has a 1\u20443 chance of taming the wolf.  A wolf cannot be tamed if it is hostile or already tamed.\n\n\n\ud83d\udccc *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",
+    "answer_chunk_similarity": 8.911526203155518,
+    "faithful_coverage": 1.7543859649122808,
+    "negative_faithfulness": 1.60969078540802,
+    "faithfulness_llm": 10.0,
+    "faithful_coverage_llm": 7.0,
+    "ground_truth_answer": "Right-click a wild wolf with a bone until hearts appear, then it becomes tamed."
+  },
+  {
+    "query": "How to craft an Iron Sword?",
+    "generated_answer": "Ingredients: Iron Ingot + Stick\n\nCrafting Grid:\n\n[    ] [ Iron Ingot ] [    ]\n[    ] [ Iron Ingot ] [    ]\n[    ] [ Stick ] [    ]\n\n\n\ud83d\udccc *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",
+    "ground_truth_answer": "Arrange two iron ingots and one stick according to the instructions on minecraft.wiki to craft an Iron Sword.",
+    "answer_chunk_similarity": 8.99564504623413,
+    "faithful_coverage": 2.631578947368421,
+    "negative_faithfulness": 1.391603946685791,
+    "faithfulness_llm": 10.0,
+    "faithful_coverage_llm": 9.0
+  },
+  {
+    "query": "How can I convert a diamond pickaxe to a netherite pickaxe?",
+    "generated_answer": "Use a netherite ingot and a netherite upgrade smithing table to upgrade a diamond pickaxe to a netherite pickaxe.\n\n\n\ud83d\udccc *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",
+    "ground_truth_answer": "Use a smithing table to combine a diamond pickaxe with a netherite ingot, upgrading it to a netherite pickaxe.",
+    "answer_chunk_similarity": 8.97856056690216,
+    "faithful_coverage": 5.217391304347826,
+    "negative_faithfulness": 0.7854717969894409,
+    "faithfulness_llm": 10.0,
+    "faithful_coverage_llm": 7.0
+  },
+  {
+    "query": "What is the process to create a lingering potion?",
+    "generated_answer": "Adding dragon's breath to a splash potion creates a lingering potion.\n\n\n\ud83d\udccc *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",
+    "ground_truth_answer": "Brew a splash potion and then add dragon's breath in the brewing stand to create a lingering potion.",
+    "answer_chunk_similarity": 8.81661832332611,
+    "faithful_coverage": 4.102564102564102,
+    "negative_faithfulness": 1.1467903852462769,
+    "faithfulness_llm": 10.0,
+    "faithful_coverage_llm": 9.0
+  },
+  {
+    "query": "How do I breed bees?",
+    "generated_answer": "Bees can be bred by giving them any of the following, with the exceptions of open eyeblossom and wither rose:  (Specific blocks are not listed in the provided text).  This will cause them to enter love mode and create a baby bee, granting 1-7 experience. Parent bees have a 5-minute cooldown before breeding again, and babies mature in 20 minutes (1 in-game day).\n\n\n\ud83d\udccc *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",
+    "ground_truth_answer": "Place flowers near a beehive or bee nest and wait for bees to gather pollen; they will eventually produce a new bee if conditions are met.",
+    "answer_chunk_similarity": 9.111436605453491,
+    "faithful_coverage": 1.0,
+    "negative_faithfulness": 1.3574916124343872,
+    "faithfulness_llm": 9.0,
+    "faithful_coverage_llm": 0.0
+  },
+  {
+    "query": "What is the process to tame a cat?",
+    "generated_answer": "Stray cats can be tamed using raw cod or raw salmon. Each has a 1/3 chance of taming the cat.  Once tamed, they follow the player, don't despawn, and no longer fear the player.  See \"Behavior for how to approach a cat\" (this information is not provided in the given context).\n\n\n\ud83d\udccc *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",
+    "ground_truth_answer": "Feed stray cats raw fish until they display hearts, at which point they become tamed.",
+    "answer_chunk_similarity": 9.450432658195496,
+    "faithful_coverage": 1.3157894736842104,
+    "negative_faithfulness": 1.5160530805587769,
+    "faithfulness_llm": 9.0,
+    "faithful_coverage_llm": 2.0
+  }
+]

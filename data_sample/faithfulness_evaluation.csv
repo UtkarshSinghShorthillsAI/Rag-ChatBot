@@ -1,0 +1,31 @@
+query,generated_answer,answer_chunk_similarity,faithful_coverage,negative_faithfulness,faithfulness_llm,faithful_coverage_llm,ground_truth_answer
+What steps are needed to tame a wolf?,"Feed a wolf bones.  The number of bones required is random; each bone has a 1⁄3 chance of taming the wolf.  A wolf cannot be tamed if it is hostile or already tamed.
+
+
+📌 *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",8.911526203155518,1.7543859649122808,1.60969078540802,10.0,7.0,"Right-click a wild wolf with a bone until hearts appear, then it becomes tamed."
+How to craft an Iron Sword?,"Ingredients: Iron Ingot + Stick
+
+Crafting Grid:
+
+[    ] [ Iron Ingot ] [    ]
+[    ] [ Iron Ingot ] [    ]
+[    ] [ Stick ] [    ]
+
+
+📌 *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",8.99564504623413,2.631578947368421,1.391603946685791,10.0,9.0,Arrange two iron ingots and one stick according to the instructions on minecraft.wiki to craft an Iron Sword.
+How can I convert a diamond pickaxe to a netherite pickaxe?,"Use a netherite ingot and a netherite upgrade smithing table to upgrade a diamond pickaxe to a netherite pickaxe.
+
+
+📌 *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",8.97856056690216,5.217391304347826,0.7854717969894409,10.0,7.0,"Use a smithing table to combine a diamond pickaxe with a netherite ingot, upgrading it to a netherite pickaxe."
+What is the process to create a lingering potion?,"Adding dragon's breath to a splash potion creates a lingering potion.
+
+
+📌 *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",8.81661832332611,4.102564102564102,1.1467903852462769,10.0,9.0,Brew a splash potion and then add dragon's breath in the brewing stand to create a lingering potion.
+How do I breed bees?,"Bees can be bred by giving them any of the following, with the exceptions of open eyeblossom and wither rose:  (Specific blocks are not listed in the provided text).  This will cause them to enter love mode and create a baby bee, granting 1-7 experience. Parent bees have a 5-minute cooldown before breeding again, and babies mature in 20 minutes (1 in-game day).
+
+
+📌 *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",9.111436605453491,1.0,1.3574916124343872,9.0,0.0,Place flowers near a beehive or bee nest and wait for bees to gather pollen; they will eventually produce a new bee if conditions are met.
+What is the process to tame a cat?,"Stray cats can be tamed using raw cod or raw salmon. Each has a 1/3 chance of taming the cat.  Once tamed, they follow the player, don't despawn, and no longer fear the player.  See ""Behavior for how to approach a cat"" (this information is not provided in the given context).
+
+
+📌 *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",9.450432658195496,1.3157894736842104,1.5160530805587769,9.0,2.0,"Feed stray cats raw fish until they display hearts, at which point they become tamed."
