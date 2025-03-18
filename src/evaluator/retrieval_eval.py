@@ -3,8 +3,8 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from src.pipeline.retriever import Retriever
 from src.evaluator.logging import EvaluationLogger
-from src.pipeline.generator import Generator  # Import LLM Generator
-from rouge_score import rouge_scorer  # ✅ New import for ROUGE-L
+from src.pipeline.generator import Generator
+from rouge_score import rouge_scorer  
 
 class RetrievalEvaluator:
     """
@@ -24,7 +24,7 @@ class RetrievalEvaluator:
         self.retriever = retriever
         self.generator = generator
         self.model = SentenceTransformer(embedding_model)
-        self.logger = EvaluationLogger()
+        self.logger = EvaluationLogger(eval_type="retrieval")
         self.rouge_scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
 
     # ✅ COSINE SIMILARITY METHODS (No Redundant Retrievals)
@@ -37,13 +37,12 @@ class RetrievalEvaluator:
         query_embedding = self.model.encode([query], normalize_embeddings=True)
         retrieved_embedding = self.model.encode([" ".join(retrieved_chunks)], normalize_embeddings=True)
 
-        precision_score = float(cosine_similarity(query_embedding, retrieved_embedding)[0][0])
+        precision_score = float(cosine_similarity(query_embedding, retrieved_embedding)[0][0]) * 10  # Scale to 0-10
         print(f"📊 Context Precision Score (Cosine): {precision_score:.2f}")
 
-        # Log both cosine and LLM scores
         result = {"query": query, "context_precision": {"cosine": precision_score}}
         self.logger.log(result)
-        return precision_score*10
+        return precision_score 
 
     def compute_context_recall(self, query, ground_truth_answer, retrieved_chunks):
         """Measures whether retrieved chunks contain all the necessary details."""
@@ -54,13 +53,28 @@ class RetrievalEvaluator:
         retrieved_embedding = self.model.encode([" ".join(retrieved_chunks)], normalize_embeddings=True)
         ground_truth_embedding = self.model.encode([ground_truth_answer], normalize_embeddings=True)
 
-        recall_score = float(cosine_similarity(ground_truth_embedding, retrieved_embedding)[0][0])
+        recall_score = float(cosine_similarity(ground_truth_embedding, retrieved_embedding)[0][0]) * 10  # Scale to 0-10
         print(f"📊 Context Recall Score (Cosine): {recall_score:.2f}")
 
-        result = {"query": query, "context_recall": {"cosine": recall_score}}
+        result = {"query": query, "ground_truth_answer": ground_truth_answer,"context_recall": {"cosine": recall_score}}
         self.logger.log(result)
-        return recall_score*10
+        return recall_score 
 
+    def compute_retrieval_precision(self, query, ground_truth_answer, retrieved_chunks):
+        """Measures how much of the retrieved content is actually relevant."""
+        if not retrieved_chunks:
+            print("⚠️ No retrieved chunks for precision evaluation.")
+            return 0.0
+
+        retrieved_embedding = self.model.encode([" ".join(retrieved_chunks)], normalize_embeddings=True)
+        ground_truth_embedding = self.model.encode([ground_truth_answer], normalize_embeddings=True)
+
+        precision_score = float(cosine_similarity(retrieved_embedding, ground_truth_embedding)[0][0]) * 10  # Scale to 0-10
+        print(f"📊 Retrieval Precision Score (Cosine): {precision_score:.2f}")
+
+        result = {"query": query, "retrieval_precision": {"llm": precision_score}}  # Keeping only LLM-based retrieval precision here, if needed.
+        self.logger.log(result)
+        return precision_score
 
     # ✅ LLM-BASED METHODS (No Redundant Retrievals)
     def compute_context_precision_with_llm(self, query, retrieved_chunks):
@@ -79,20 +93,17 @@ class RetrievalEvaluator:
         {retrieved_chunks}
 
         Evaluate how precisely these retrieved chunks match the USER QUERY.  
-        Provide a score from 0 to 10 can be float, where:
-
-        - 10 means ALL retrieved chunks are perfectly relevant to the query.
-        - 5 means HALF of the retrieved chunks are relevant, and HALF are irrelevant.
-        - 0 means NONE of the retrieved chunks are relevant to the query.
-
-        Respond strictly with a single numeric score (no additional text).
+        Provide a score from 0 to 10, where:
+        - 10 means ALL retrieved chunks are perfectly relevant.
+        - 5 means HALF are relevant.
+        - 0 means NONE are relevant.
+        Respond strictly with a single numeric score (no extra text).
         """
         response = self.generator.model.generate_content(prompt)
         score = self._parse_llm_score(response)
 
         print(f"📊 Context Precision Score (LLM): {score:.2f}")
 
-        # Log both scores
         result = self._log_with_llm_score("context_precision", query, score)
         self.logger.log(result)
         return score
@@ -112,15 +123,12 @@ class RetrievalEvaluator:
         And the RETRIEVED CHUNKS:
         {retrieved_chunks}
 
-        Evaluate how comprehensively these retrieved chunks cover the details present in the GROUND TRUTH ANSWER.
-
-        Provide a score from 0 to 10 can be float, where:
-
-        - 10 means retrieved chunks FULLY cover ALL important details from the ground truth answer.
-        - 5 means retrieved chunks cover SOME (but not all) key details.
-        - 0 means retrieved chunks DO NOT cover ANY of the important details from the ground truth answer.
-
-        Respond strictly with a single numeric score (no additional text).
+        Evaluate how comprehensively these retrieved chunks cover the details present in the ground truth answer.
+        Provide a score from 0 to 10, where:
+        - 10 means FULL coverage.
+        - 5 means partial coverage.
+        - 0 means no coverage.
+        Respond strictly with a single numeric score (no extra text).
         """
         response = self.generator.model.generate_content(prompt)
         score = self._parse_llm_score(response)
@@ -146,15 +154,12 @@ class RetrievalEvaluator:
         And the RETRIEVED CHUNKS:
         {retrieved_chunks}
 
-        Evaluate how precisely these retrieved chunks provide information relevant to the query WITHOUT including irrelevant or unnecessary details.
-
-        Provide a score from 0 to 10 can be float, where:
-
-        - 10 means retrieved chunks contain ONLY relevant information, with NO unnecessary or irrelevant details.
-        - 5 means retrieved chunks contain about HALF unnecessary or irrelevant information.
-        - 0 means retrieved chunks contain MOSTLY unnecessary or irrelevant information.
-
-        Respond strictly with a single numeric score (no additional text).
+        Evaluate how precisely these retrieved chunks provide information relevant to the query WITHOUT including irrelevant details.
+        Provide a score from 0 to 10, where:
+        - 10 means ONLY relevant information is present.
+        - 5 means about HALF the information is irrelevant.
+        - 0 means MOSTLY irrelevant.
+        Respond strictly with a single numeric score (no extra text).
         """
         response = self.generator.model.generate_content(prompt)
         score = self._parse_llm_score(response)
@@ -165,7 +170,6 @@ class RetrievalEvaluator:
         self.logger.log(result)
         return score
 
-
     # ✅ CONTEXT OVERLAP SCORE (ROUGE-L)
     def compute_context_overlap(self, query, ground_truth_answer, retrieved_chunks):
         """Measures how much of the ground truth answer is contained in retrieved chunks using ROUGE-L."""
@@ -175,35 +179,32 @@ class RetrievalEvaluator:
 
         retrieved_text = " ".join(retrieved_chunks)
         rouge_scores = self.rouge_scorer.score(ground_truth_answer, retrieved_text)
-        rouge_l_score = rouge_scores["rougeL"].fmeasure  # ROUGE-L F1 Score
-
+        rouge_l_score = rouge_scores["rougeL"].fmeasure * 10  # Scale to 0-10
         print(f"📊 Context Overlap Score (ROUGE-L): {rouge_l_score:.2f}")
 
         result = {"query": query, "context_overlap": {"rougeL": rouge_l_score}}
         self.logger.log(result)
-        return rouge_l_score*10
+        return rouge_l_score
 
     # ✅ NEGATIVE RETRIEVAL CHECK
     def compute_negative_retrieval(self, query, retrieved_chunks, threshold=0.2):
         """Checks how many retrieved chunks are irrelevant to the query."""
         if not retrieved_chunks:
             print("⚠️ No retrieved chunks for negative retrieval evaluation.")
-            return 1.0  # If nothing is retrieved, it's fully irrelevant.
+            return 10.0  # If nothing is retrieved, it's fully irrelevant.
 
         query_embedding = self.model.encode([query], normalize_embeddings=True)
         irrelevant_count = sum(
-            1
-            for chunk in retrieved_chunks
-            if cosine_similarity(query_embedding, self.model.encode([chunk], normalize_embeddings=True))[0][0]
-            < threshold
+            1 for chunk in retrieved_chunks
+            if cosine_similarity(query_embedding, self.model.encode([chunk], normalize_embeddings=True))[0][0] < threshold
         )
 
-        negative_retrieval_score = irrelevant_count / len(retrieved_chunks)  # % of irrelevant chunks
+        negative_retrieval_score = (irrelevant_count / len(retrieved_chunks)) * 10  # Scale to 0-10
         print(f"📊 Negative Retrieval Score: {negative_retrieval_score:.2f}")
 
-        result = {"query": query, "negative_retrieval": negative_retrieval_score}
+        result = {"query": query, "negative_retrieval": {"cosine": negative_retrieval_score}}
         self.logger.log(result)
-        return negative_retrieval_score*10
+        return negative_retrieval_score
 
     # ✅ LLM-BASED CONTEXT OVERLAP SCORE
     def compute_context_overlap_with_llm(self, query, ground_truth_answer, retrieved_chunks):
@@ -224,14 +225,8 @@ class RetrievalEvaluator:
         And the RETRIEVED CHUNKS:
         {retrieved_chunks}
 
-        Evaluate how much of the GROUND TRUTH ANSWER is present in the RETRIEVED CHUNKS.
-
-        Provide a score from 0 to 10 can be float, where:
-        - 10 means retrieved chunks contain the FULL answer exactly as it appears in ground truth.
-        - 5 means retrieved chunks contain HALF the important information.
-        - 0 means retrieved chunks contain NOTHING relevant to the answer.
-
-        Respond strictly with a single numeric score (no extra text).
+        Evaluate how much of the ground truth answer is present in the retrieved chunks.
+        Respond with a score from 0 to 10 (no extra text).
         """
         response = self.generator.model.generate_content(prompt)
         score = self._parse_llm_score(response)
@@ -247,7 +242,7 @@ class RetrievalEvaluator:
         """Uses LLM to judge if retrieved chunks contain irrelevant information."""
         if not retrieved_chunks:
             print("⚠️ No retrieved chunks for LLM-based negative retrieval check.")
-            return 10.0  # If nothing is retrieved, it's fully irrelevant.
+            return 10.0  # Fully irrelevant
 
         prompt = f"""
         You are an expert judge evaluating retrieval relevance.
@@ -258,14 +253,8 @@ class RetrievalEvaluator:
         And the RETRIEVED CHUNKS:
         {retrieved_chunks}
 
-        Evaluate how many of the retrieved chunks are **completely irrelevant** to the query.
-
-        Provide a score from 0 to 10 can be float, where:
-        - 10 means **ALL retrieved chunks are irrelevant**.
-        - 5 means **HALF of the retrieved chunks are irrelevant**.
-        - 0 means **ALL retrieved chunks are relevant**.
-
-        Respond strictly with a single numeric score (no extra text).
+        Evaluate how many of the retrieved chunks are completely irrelevant to the query.
+        Respond with a score from 0 to 10 (no extra text).
         """
         response = self.generator.model.generate_content(prompt)
         score = self._parse_llm_score(response)
@@ -289,7 +278,7 @@ class RetrievalEvaluator:
     def _log_with_llm_score(self, metric_name, query, llm_score):
         """Adds LLM-based scores to existing logged results."""
         log_entry = {"query": query}
-        existing_log = self.logger.read_last_entry()  # Assume logger has a function to read last entry
+        existing_log = self.logger.read_last_entry()
 
         if existing_log and metric_name in existing_log:
             existing_log[metric_name]["llm"] = llm_score

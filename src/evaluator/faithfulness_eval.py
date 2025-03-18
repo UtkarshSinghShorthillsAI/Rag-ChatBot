@@ -23,7 +23,7 @@ class FaithfulnessEvaluator:
         """
         self.retriever = retriever
         self.generator = generator
-        self.logger = EvaluationLogger()
+        self.logger = EvaluationLogger(eval_type="faithfulness")
         self.model = SentenceTransformer(embedding_model)  # ✅ Now using `bge-base-en`
         self.rouge_scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)  # ✅ ROUGE-L Scorer
 
@@ -61,6 +61,7 @@ class FaithfulnessEvaluator:
         return {
             "query": query,
             "generated_answer": generated_answer,
+            "ground_truth_answer": ground_truth_answer,
             "answer_chunk_similarity": answer_chunk_similarity,
             "faithful_coverage": faithful_coverage,
             "negative_faithfulness": negative_faithfulness,
