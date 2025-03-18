@@ -282,9 +282,51 @@ Arrange the materials as follows:
 📌 Read more at: [Minecraft Wiki](https://minecraft.wiki)
 ```
 
+## **Streamlit Frontend**  
+
+The **Streamlit bot** provides a **simple and interactive UI** for users to query the **Minecraft RAG Bot**. Instead of using the pipeline via command line, users can enter questions in a web interface and receive **instant, structured responses**.
+
 ---
+
+## **Features**  
+✅ **User-Friendly UI** – Enter queries directly in a text box.  
+✅ **Real-Time Responses** – Answers fetched from the RAG pipeline.  
+✅ **Markdown Formatting** – Structured, easy-to-read answers.  
+✅ **Source Links** – Provides a reference to the **Minecraft Wiki**.  
+
+---
+
+## **How It Works**  
+1️⃣ **User enters a query** (e.g., `"How do I breed villagers?"`).  
+2️⃣ **Query is processed** by the RAG pipeline.  
+3️⃣ **Answer is displayed** with structured text and source links.  
+
+---
+
+### **Usage Example**  
+### **Run the Streamlit bot**  
+```bash
+streamlit run src/chatbot/bot.py
+```
+🔹 **Opens in browser:** `http://localhost:8501`  
+
+### **Example Interaction**  
+![Minecraft Bot UI](https://github.com/UtkarshSinghShorthillsAI/Rag-ChatBot/blob/main/data_sample/bot_ui.png)
+
+
+
+
+## **Key Code Components**
+ **`bot.py`** (Streamlit UI)
+- Handles user input.  
+- Calls the **RAG pipeline**.  
+- Displays the response.  
+
+
 
 ## **Final Notes**
 - The pipeline **only answers based on retrieved knowledge**, reducing **hallucination risks**.  
 - If no relevant information is found, it **does not generate misleading answers**.  
 - This design ensures **accurate, source-backed responses** for Minecraft-related queries.  
+
+
