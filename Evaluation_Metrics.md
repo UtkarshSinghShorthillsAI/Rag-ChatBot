@@ -4,7 +4,7 @@
 This document outlines the evaluation metrics used for assessing the performance of the **retrieval system** and the **faithfulness of LLM-generated responses** in our RAG (Retrieval-Augmented Generation) pipeline.
 
 We employ both **non-LLM-based** (cosine similarity, ROUGE-L) and **LLM-based** methods to ensure robust evaluation.
-
+#### [SEE SAMPLE EVALUATION RESULTS](https://github.com/UtkarshSinghShorthillsAI/Rag-ChatBot/blob/main/Sample_Evaluation.md)
 ---
 
 ## **1️⃣ Retrieval Evaluation Metrics**
