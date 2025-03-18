@@ -10,13 +10,12 @@ This **Minecraft RAG Bot** makes information retrieval effortless. Using **Retri
 ### **What This Documentation Covers**  
 This documentation is structured into the following sections:  
 
-1. **Project Overview** – Goals and technology stack.  
-2. **Directory Structure** – Breakdown of files and modules.  
-3. **Architecture** – How different components interact.  
-4. **Scraper** – Extracting and structuring wiki data.  
-5. **Embedding** – Storing game knowledge for efficient retrieval.  
-6. **Pipeline** – How queries are processed to generate responses.  
-7. **Frontend** – A lightweight Streamlit UI for easy access.  
+1. **Project Overview and Architecture** – Goals and technology stack.  
+2. **Directory Structure** – Breakdown of files and modules.   
+3. **Scraper** – Extracting and structuring wiki data.  
+4. **Embedding** – Storing game knowledge for efficient retrieval.  
+5. **Pipeline** – How queries are processed to generate responses.  
+6. **Frontend** – A lightweight Streamlit UI for easy access.  
 
 
 ## **Project Overview**  
@@ -28,6 +27,9 @@ This **Minecraft RAG Bot** is designed to provide **quick and accurate answers**
 2. **Embedding** – Converts text into vector representations for retrieval.  
 3. **RAG Pipeline** – Retrieves relevant knowledge and generates responses.  
 4. **Frontend** – A **Streamlit-based UI** for easy interaction.  
+
+### Architecture:
+![Architecture Image](https://github.com/UtkarshSinghShorthillsAI/Rag-ChatBot/blob/main/data_sample/rag_architecture.png)
 
 ### **Directory Structure**  
 ```
@@ -310,7 +312,7 @@ streamlit run src/chatbot/bot.py
 ```
 🔹 **Opens in browser:** `http://localhost:8501`  
 
-### **Example Interaction**  
+### **Example Interaction Screenshot**  
 ![Minecraft Bot UI](https://github.com/UtkarshSinghShorthillsAI/Rag-ChatBot/blob/main/data_sample/bot_ui.png)
 
 
