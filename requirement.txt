@@ -1,4 +1,12 @@
-bs4
-requests
+beautifulsoup4
 chromadb
+python-dotenv
+google-api-python-client
 langchain
+rouge-score
+selenium
+sentence-transformers
+scikit-learn
+streamlit
+tqdm
+webdriver-manager
