@@ -156,14 +156,14 @@ The **embedding module** is responsible for converting structured text into **de
 
 ## **How It Works**
 The embedding process follows three main steps:
-1. **Embedding Generation** → Converts text chunks into vector representations.
+1. **Embedding Generation** → Converts text chunks into vector representations using **bge-base-en embeddings**.
 2. **Storage in Vector DB** → Stores embeddings in **ChromaDB** for retrieval.
 3. **Efficient Retrieval** → Enables fast, similarity-based searches for relevant information.
 
 ---
 
 ## **1️⃣ Embedding Generation** (`embed.py`)
-- Uses **Google Gemini** (or any compatible model) to generate vector embeddings.
+- Uses **bge-base-en** (or any compatible model) to generate vector embeddings.
 - Reads **chunked text** from `data/chunks/`.
 - Saves embeddings in **JSONL format** inside `data/embeddings/`.
 
@@ -210,7 +210,7 @@ The **Minecraft RAG pipeline** consists of three primary components:
 
 ### **1️⃣ Retriever (`retriever.py`)**  
 - Queries the **ChromaDB vector database** to fetch the most relevant **wiki chunks** for a given query.  
-- Uses **Google Gemini embeddings** to encode queries and perform similarity-based retrieval.  
+- Uses **bge-base-en embeddings** to encode queries and perform similarity-based retrieval.  
 
 🔹 **Workflow:**  
 1. Generate **query embedding** using Gemini API.  
