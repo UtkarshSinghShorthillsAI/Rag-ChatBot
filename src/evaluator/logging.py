@@ -1,29 +1,46 @@
 import json
-import csv
 import os
+import pandas as pd
+from openpyxl import load_workbook
 
 class EvaluationLogger:
-    def __init__(self, eval_type="retrieval", json_path=None, csv_path=None):
+    """
+    A helper class to log evaluation results to JSON and Excel files in a proper tabular format.
+    """
+
+    def __init__(self, eval_type="retrieval", json_path=None, excel_path=None, log_file=None):
+        """
+        Initializes the logger.
+        :param eval_type: "retrieval" or "faithfulness". Determines file naming.
+        :param json_path: Optional custom JSON file path.
+        :param excel_path: Optional custom Excel file path.
+        :param log_file: Path for process tracking logs.
+        """
         self.eval_type = eval_type.lower()
-        self.json_path = json_path if json_path else f"data/{self.eval_type}_evaluation.json"
-        self.csv_path = csv_path if csv_path else f"data/{self.eval_type}_evaluation.csv"
+        self.json_path = json_path or f"data/{self.eval_type}_evaluation.json"
+        self.excel_path = excel_path or f"data/{self.eval_type}_evaluation.xlsx"
+        self.log_file = log_file or f"data/{self.eval_type}_process.log"
+
+        # Ensure data directory exists
+        os.makedirs(os.path.dirname(self.json_path), exist_ok=True)
 
     def log(self, data):
-        """Logs data to JSON only."""
+        """Logs data to JSON and Excel files."""
         self.log_to_json(data)
-
+        self.log_to_process_file(f"Logged data for query: {data.get('query', '')}")
+    
     def log_to_json(self, data):
-        """Appends evaluation data to the JSON file while avoiding duplicate queries."""
-        existing_data = []
-        
+        """Appends evaluation data to the JSON file."""
         if os.path.exists(self.json_path):
             with open(self.json_path, "r") as f:
                 try:
                     existing_data = json.load(f)
                 except json.JSONDecodeError:
                     existing_data = []  # Reset if file is corrupted
+        else:
+            existing_data = []
 
-        # Avoid duplicate query entries by updating the last entry if it matches the query.
+        # Avoid duplicate query entries
         if existing_data and existing_data[-1].get("query") == data.get("query"):
             existing_data[-1].update(data)
         else:
@@ -32,94 +49,29 @@ class EvaluationLogger:
         with open(self.json_path, "w") as f:
             json.dump(existing_data, f, indent=2)
 
-        print(f"✅ Data logged to {self.json_path}")
-
-    def generate_csv(self):
-        """Generates a CSV from the JSON log file, handling both retrieval (nested) and faithfulness (flat) formats correctly."""
+    def log_to_excel(self):
+        """Converts JSON log into Excel (one-time batch process)."""
         if not os.path.exists(self.json_path):
-            print("No JSON log file found.")
+            self.log_to_process_file("No JSON data found for writing to Excel.")
             return
 
         with open(self.json_path, "r") as f:
             try:
                 data = json.load(f)
             except json.JSONDecodeError:
-                print("JSON log file is corrupted.")
+                self.log_to_process_file("Failed to parse JSON data.")
                 return
 
-        if not data:
-            print("JSON log file is empty.")
-            return
+        df = pd.json_normalize(data, sep="_")  # Flatten nested JSON properly
+        if os.path.exists(self.excel_path):
+            with pd.ExcelWriter(self.excel_path, mode="a", engine="openpyxl", if_sheet_exists="overlay") as writer:
+                df.to_excel(writer, index=False, sheet_name="EvaluationResults")
+        else:
+            df.to_excel(self.excel_path, index=False, sheet_name="EvaluationResults")
 
-        with open(self.csv_path, "w", newline="") as f:
-            writer = csv.writer(f)
+        self.log_to_process_file("Successfully wrote evaluation results to Excel.")
 
-            # ✅ Differentiate between retrieval and faithfulness logs
-            if self.eval_type == "retrieval":  # Retrieval logs (nested)
-                self._generate_retrieval_csv(writer, data)
-            else:  # Faithfulness logs (flat)
-                self._generate_faithfulness_csv(writer, data)
-
-        print(f"✅ CSV successfully generated: {self.csv_path}")
-
-    def _generate_retrieval_csv(self, writer, data):
-        """Handles CSV generation for retrieval evaluation logs (nested JSON)."""
-        # Determine column headers in order using the first entry as reference.
-        first_entry = data[0]
-        column_headers = []
-        for key, value in first_entry.items():
-            if isinstance(value, dict):
-                for subkey in value.keys():
-                    column_headers.append((key, subkey))
-            else:
-                column_headers.append((key, None))
-        
-        # Add any additional columns from subsequent entries.
-        for entry in data[1:]:
-            for key, value in entry.items():
-                if isinstance(value, dict):
-                    for subkey in value.keys():
-                        if (key, subkey) not in column_headers:
-                            column_headers.append((key, subkey))
-                else:
-                    if (key, None) not in column_headers:
-                        column_headers.append((key, None))
-        
-        # Write header rows: first row for parent keys and second row for subkeys.
-        writer.writerow([key for key, subkey in column_headers])
-        writer.writerow([subkey if subkey is not None else "" for key, subkey in column_headers])
-        
-        # Write data rows.
-        for entry in data:
-            row = []
-            for key, subkey in column_headers:
-                if subkey is None:
-                    row.append(entry.get(key, ""))
-                else:
-                    nested = entry.get(key, {})
-                    if isinstance(nested, dict):
-                        row.append(nested.get(subkey, ""))
-                    else:
-                        row.append("")
-            writer.writerow(row)
-
-
-    def _generate_faithfulness_csv(self, writer, data):
-        """Handles CSV generation for faithfulness evaluation logs (flat JSON)."""
-        headers = list(data[0].keys())  # Assume first entry has all keys
-        writer.writerow(headers)
-
-        for entry in data:
-            writer.writerow([entry.get(col, "") for col in headers])
-
-    def read_last_entry(self):
-        """Reads the last logged entry from the JSON file."""
-        if os.path.exists(self.json_path):
-            with open(self.json_path, "r") as f:
-                try:
-                    data = json.load(f)
-                    if data:
-                        return data[-1]  # Return the last log entry
-                except json.JSONDecodeError:
-                    return None
-        return None
+    def log_to_process_file(self, message):
+        """Writes logs tracking evaluation status."""
+        with open(self.log_file, "a") as f:
+            f.write(f"{message}\n")
