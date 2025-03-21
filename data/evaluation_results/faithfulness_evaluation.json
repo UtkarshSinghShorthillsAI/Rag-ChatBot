@@ -1,0 +1,12 @@
+[
+  {
+    "query": "What is the Nether dimension in Minecraft?",
+    "ground_truth_answer": "The Nether is a dangerous, hell-like dimension filled with fire, lava, unique biomes, and many hostile mobs. It is accessed via Nether portals&#8203;:contentReference[oaicite:0]{index=0}",
+    "generated_answer": "Based on the provided text, the Nether in Minecraft is a separate dimension from the Overworld and the End.  It is accessed via a nether portal built in the Overworld using obsidian.  The Nether is 128 blocks high, compared to the Overworld's 384 blocks. In Java Edition, the build limit is 256 blocks.  The term \"Nether\" is a metaphorical name, not a literal description of its location relative to the Overworld.\n\n\n\ud83d\udccc *Read more at:* [Minecraft Wiki](https://minecraft.wiki)",
+    "answer_chunk_similarity": 9.53817367553711,
+    "faithful_coverage": 0.9195402298850575,
+    "negative_faithfulness": 1.0977435111999512,
+    "faithfulness_score_llm": "FDTKE",
+    "faithful_coverage_llm": "FDTKE"
+  }
+]
