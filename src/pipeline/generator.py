@@ -2,21 +2,24 @@ import logging
 import google.generativeai as genai
 from dotenv import load_dotenv
 import os
+from src.log_manager import setup_logger
 
+# Set up logger for test run
+logger = setup_logger("logs/generator.log")
 # Load API Key
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
 class Generator:
-    def __init__(self, model_name="gemini-1.5-pro-latest"):
+    def __init__(self, model_name="gemini-1.5-flash-latest"):
         """Initialize the response generator."""
         self.model = genai.GenerativeModel(model_name)
-        logging.info(f"✅ Generator initialized with model: {model_name}")
+        logger.info(f"✅ Generator initialized with model: {model_name}")
 
     def generate_response(self, query, retrieved_chunks, retrieved_sources):
         """Generates an LLM response based on retrieved knowledge chunks."""
-        logging.info(f"📝 Generating response for query: {query}")
+        logger.info(f"📝 Generating response for query: {query}")
 
         if not retrieved_chunks:
             return "⚠️ No relevant information found."
@@ -30,8 +33,8 @@ class Generator:
         # Construct the prompt
         prompt = f"""
         You are a knowledgeable assistant trained on Minecraft Wiki.
-        Answer strictly using the provided context. If you are unable to find direct answer in the provided context,
-        If required, structure the answer properly using bullet points, etc. If a crafting recipe is asked and you find it in the context only then, make a grid as mentioned in the context to represent the recipe.
+        Answer strictly using the provided context.
+        If required, structure the answer properly using bullet points, etc. If a crafting recipe is asked and you find it in the context then, make a 3x3 grid carefully as mentioned in the context to represent the recipe.
 
         Context:
         {context}
@@ -54,5 +57,5 @@ class Generator:
 
             return final_response
         except Exception as e:
-            logging.error(f"❌ Error generating response: {e}")
+            logger.error(f"❌ Error generating response: {e}")
             return "⚠️ Error generating response."

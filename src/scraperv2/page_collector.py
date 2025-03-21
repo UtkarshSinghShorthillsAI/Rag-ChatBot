@@ -130,6 +130,6 @@ class CategoryPageCollector:
 
 # Example usage:
 if __name__ == "__main__":
-    category = "Blocks"  # Example category
+    category = "Tools"  # Example category
     collector = CategoryPageCollector(category)
     collector.run()

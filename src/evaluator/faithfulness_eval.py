@@ -48,15 +48,20 @@ class FaithfulnessEvaluator:
         negative_faithfulness = self.compute_negative_faithfulness(query, retrieved_chunks, generated_answer)
 
         # ✅ Compute LLM-based faithfulness metrics
-        faithfulness_llm = self.llm_as_judge(query, retrieved_chunks, generated_answer)
-        faithful_coverage_llm = self.llm_faithful_coverage(query, ground_truth_answer, generated_answer)
+        try:
+            faithfulness_llm = self.llm_as_judge(query, retrieved_chunks, generated_answer)
+            faithful_coverage_llm = self.llm_faithful_coverage(query, ground_truth_answer, generated_answer)
+        except Exception as e:
+            print(f"❌ Error generating response: {str(e)}")
+            faithfulness_llm = "FDTKE"
+            faithful_coverage_llm = "FDTKE"
 
         print("\n📊 Final Faithfulness Evaluation Scores:")
         print(f"✅ Answer-Chunk Similarity: {answer_chunk_similarity:.2f}")
         print(f"✅ Faithful Coverage (ROUGE-L): {faithful_coverage:.2f}")
         print(f"✅ Negative Faithfulness: {negative_faithfulness:.2f}")
-        print(f"🤖 Faithfulness Score (LLM): {faithfulness_llm:.2f}")
-        print(f"🤖 LLM-Based Faithful Coverage: {faithful_coverage_llm:.2f}")
+        print(f"🤖 Faithfulness Score (LLM): {faithfulness_llm}")
+        print(f"🤖 LLM-Based Faithful Coverage: {faithful_coverage_llm}")
 
         return {
             "query": query,

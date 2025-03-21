@@ -2,8 +2,11 @@ import os
 import logging
 import chromadb
 from sentence_transformers import SentenceTransformer
+from src.log_manager import setup_logger
 
-# Setup logging
+# Set up logger for test run
+logger = setup_logger("logs/retriever.log")
+# Setup logger
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class Retriever:
@@ -14,30 +17,30 @@ class Retriever:
 
         # Load local embedding model
         self.embedding_model = SentenceTransformer("BAAI/bge-base-en")
-        logging.info("🔄 Loaded embedding model: BAAI/bge-base-en")
+        logger.info("🔄 Loaded embedding model: BAAI/bge-base-en")
 
         # Check if embeddings exist
         total_embeddings = self.collection.count()
         if total_embeddings == 0:
-            logging.warning("⚠️ No embeddings found in ChromaDB! Run embedding first.")
+            logger.warning("⚠️ No embeddings found in ChromaDB! Run embedding first.")
         else:
-            logging.info(f"✅ ChromaDB initialized with {total_embeddings} documents.")
+            logger.info(f"✅ ChromaDB initialized with {total_embeddings} documents.")
 
     def get_embedding(self, text):
         """Generate an embedding using the BGE model."""
         try:
             return self.embedding_model.encode(text, normalize_embeddings=True).tolist()
         except Exception as e:
-            logging.error(f"❌ Error generating embedding: {e}")
+            logger.error(f"❌ Error generating embedding: {e}")
             return None
 
     def query(self, query_text, top_k=5):
         """Retrieves relevant chunks based on the query."""
-        logging.info(f"🔍 Querying for: {query_text}")
+        logger.info(f"🔍 Querying for: {query_text}")
 
         query_embedding = self.get_embedding(query_text)
         if not query_embedding:
-            logging.error("❌ Failed to generate embedding for query.")
+            logger.error("❌ Failed to generate embedding for query.")
             return [], []
 
         results = self.collection.query(query_embeddings=[query_embedding], n_results=top_k)
@@ -50,7 +53,8 @@ class Retriever:
                 retrieved_chunks.append(metadata["text"])
                 retrieved_sources.append(metadata.get("source", "Unknown Source"))
 
-        logging.info(f"✅ Retrieved {len(retrieved_chunks)} relevant chunks.")
+        logger.info(f"✅ Retrieved {len(retrieved_chunks)} relevant chunks.")
+        logger.info(f"retrieved_chunks : {retrieved_chunks}")
         return retrieved_chunks, retrieved_sources
 
 
