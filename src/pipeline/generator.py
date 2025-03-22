@@ -36,11 +36,13 @@ class Generator:
         Answer strictly using the provided context.
         If required, structure the answer properly using bullet points, etc. If a crafting recipe is asked and you find it in the context then, make a 3x3 grid carefully as mentioned in the context to represent the recipe.
 
-        Context:
+        <Context>
         {context}
+        </Context>
 
-        Query:
+        <Query>
         {query}
+        </Query>
 
         If the context does not contain enough information, If the answer is clearly not present in the context just say "I don't know".
         """
