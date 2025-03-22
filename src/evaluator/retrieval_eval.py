@@ -46,8 +46,8 @@ class RetrievalEvaluator:
         # print(f"📊 Context Precision Score (Cosine): {precision_score:.2f}")
         global_logger.info(f"📊 Context Precision Score (Cosine): {precision_score:.2f}")
 
-        result = {"query": query, "context_precision_cosine": precision_score}
-        self.logger.log(result)
+        # result = {"query": query, "context_precision_cosine": precision_score}
+        # self.logger.log(result)
         return precision_score 
 
     def compute_context_recall(self, query, ground_truth_answer, retrieved_chunks):
@@ -64,8 +64,8 @@ class RetrievalEvaluator:
         # print(f"📊 Context Recall Score (Cosine): {recall_score:.2f}")
         global_logger.info(f"📊 Context Recall Score (Cosine): {recall_score:.2f}")
 
-        result = {"query": query, "context_recall_cosine": recall_score}
-        self.logger.log(result)
+        # result = {"query": query, "context_recall_cosine": recall_score}
+        # self.logger.log(result)
         return recall_score 
 
     def compute_retrieval_precision(self, query, ground_truth_answer, retrieved_chunks):
@@ -80,8 +80,8 @@ class RetrievalEvaluator:
         precision_score = float(cosine_similarity(retrieved_embedding, ground_truth_embedding)[0][0]) * 10  # Scale to 0-10
         global_logger.info(f"📊 Retrieval Precision Score (Cosine): {precision_score:.2f}")
 
-        result = {"query": query, "retrieval_precision_llm": precision_score}  # Now flattened
-        self.logger.log(result)
+        # result = {"query": query, "retrieval_precision_llm": precision_score}  # Now flattened
+        # self.logger.log(result)
         return precision_score
 
     # ✅ LLM-BASED METHODS (No Redundant Retrievals)
@@ -198,8 +198,8 @@ class RetrievalEvaluator:
         rouge_l_score = rouge_scores["rougeL"].fmeasure * 10  # Scale to 0-10
         global_logger.info(f"📊 Context Overlap Score (ROUGE-L): {rouge_l_score:.2f}")
 
-        result = {"query": query, "context_overlap_rougeL": rouge_l_score}
-        self.logger.log(result)
+        # result = {"query": query, "context_overlap_rougeL": rouge_l_score}
+        # self.logger.log(result)
         return rouge_l_score
 
     # ✅ NEGATIVE RETRIEVAL CHECK
@@ -219,8 +219,8 @@ class RetrievalEvaluator:
  
         global_logger.info(f"📊 Negative Retrieval Score: {negative_retrieval_score:.2f}")
 
-        result = {"query": query, "negative_retrieval_cosine": negative_retrieval_score}
-        self.logger.log(result)
+        # result = {"query": query, "negative_retrieval_cosine": negative_retrieval_score}
+        # self.logger.log(result)
         return negative_retrieval_score
 
     # ✅ LLM-BASED CONTEXT OVERLAP SCORE
