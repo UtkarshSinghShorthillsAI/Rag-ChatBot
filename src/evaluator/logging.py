@@ -68,8 +68,8 @@ class EvaluationLogger:
         df = pd.DataFrame(data)   # Flatten nested JSON properly
         
         # Ensure the correct order of columns: 'query' first, then 'ground_truth_answer', followed by others
-        column_order = ['query', 'ground_truth_answer'] + [col for col in df.columns if col not in ['query', 'ground_truth_answer']]
-        df = df[column_order]
+        # column_order = ['query', 'ground_truth_answer'] + [col for col in df.columns if col not in ['query', 'ground_truth_answer']]
+        # df = df[column_order]
 
         if os.path.exists(self.excel_path):
             with pd.ExcelWriter(self.excel_path, mode="a", engine="openpyxl", if_sheet_exists="overlay") as writer:
