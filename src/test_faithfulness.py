@@ -38,9 +38,10 @@ for entry in ground_truth_qna:
     generated_answer = generator.generate_response(query, retrieved_chunks, [])
 
     # Compute faithfulness evaluation metrics (Non-LLM)
-    answer_similarity = faithfulness_eval.answer_chunk_similarity(query, retrieved_chunks, generated_answer)
+    blobwise_answer_similarity = faithfulness_eval.compute_blobwise_similarity(query, retrieved_chunks, generated_answer)
+    chunkwise_answer_similarity = faithfulness_eval.compute_chunkwise_similarity(generated_answer, retrieved_chunks)
     faithful_coverage = faithfulness_eval.compute_faithful_coverage(query, ground_truth_answer, generated_answer)
-    negative_faithfulness = faithfulness_eval.compute_negative_faithfulness(query, retrieved_chunks, generated_answer)
+    # negative_faithfulness = faithfulness_eval.compute_negative_faithfulness(query, retrieved_chunks, generated_answer)
 
     # Compute LLM-based faithfulness evaluation metrics, with error handling for API exhaustion
     try:
@@ -56,9 +57,10 @@ for entry in ground_truth_qna:
         "query": query,
         "ground_truth_answer": ground_truth_answer,
         "generated_answer": faithfulness_eval.generator.generate_response(query, retrieved_chunks, []),
-        "answer_chunk_similarity": answer_similarity,
+        "blobwise_answer_similarity": blobwise_answer_similarity,
+        "chunkwise_answer_similarity": chunkwise_answer_similarity,
         "faithful_coverage": faithful_coverage,
-        "negative_faithfulness": negative_faithfulness,
+        # "negative_faithfulness": negative_faithfulness,
         "faithfulness_score_llm": faithfulness_score_llm,
         "faithful_coverage_llm": faithful_coverage_llm
     }

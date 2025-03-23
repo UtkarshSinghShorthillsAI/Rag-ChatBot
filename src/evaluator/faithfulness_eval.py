@@ -3,11 +3,12 @@ import os
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-from rouge_score import rouge_scorer  # ✅ New import for ROUGE-L
+from rouge_score import rouge_scorer 
 from src.pipeline.retriever import Retriever
 from src.pipeline.generator import Generator
 from src.evaluator.logging import EvaluationLogger
 from src.evaluator.evaluation_model import EvaluationModel
+from bert_score import score as bert_score
 
 # Load environment variables
 load_dotenv()
@@ -46,9 +47,10 @@ class FaithfulnessEvaluator:
         generated_answer = self.generator.generate_response(query, retrieved_chunks, [])
 
         # ✅ Compute faithfulness metrics
-        answer_chunk_similarity = self.answer_chunk_similarity(query, retrieved_chunks, generated_answer)
+        blobwise_answer_similarity = self.compute_blobwise_similarity(query, retrieved_chunks, generated_answer)
+        chunkwise_answer_similarity = self.compute_chunkwise_similarity(generated_answer, retrieved_chunks)
         faithful_coverage = self.compute_faithful_coverage(query, ground_truth_answer, generated_answer)
-        negative_faithfulness = self.compute_negative_faithfulness(query, retrieved_chunks, generated_answer)
+        # negative_faithfulness = self.compute_negative_faithfulness(query, retrieved_chunks, generated_answer)
 
         # ✅ Compute LLM-based faithfulness metrics
         try:
@@ -60,9 +62,10 @@ class FaithfulnessEvaluator:
             faithful_coverage_llm = "FDTKE"
 
         print("\n📊 Final Faithfulness Evaluation Scores:")
-        print(f"✅ Answer-Chunk Similarity: {answer_chunk_similarity:.2f}")
+        print(f"✅ Answer-Chunk Blobwise Similarity: {blobwise_answer_similarity:.2f}")
+        print(f"✅ Answer-Chunk Chunkwise Similarity: {chunkwise_answer_similarity:.2f}")
         print(f"✅ Faithful Coverage (ROUGE-L): {faithful_coverage:.2f}")
-        print(f"✅ Negative Faithfulness: {negative_faithfulness:.2f}")
+        # print(f"✅ Negative Faithfulness: {negative_faithfulness:.2f}")
         print(f"🤖 Faithfulness Score (LLM): {faithfulness_llm}")
         print(f"🤖 LLM-Based Faithful Coverage: {faithful_coverage_llm}")
 
@@ -70,16 +73,17 @@ class FaithfulnessEvaluator:
             "query": query,
             "generated_answer": generated_answer,
             "ground_truth_answer": ground_truth_answer,
-            "answer_chunk_similarity": answer_chunk_similarity,
+            "blobwise_answer_similarity": blobwise_answer_similarity,
+            "chunkwise_answer_similarity": chunkwise_answer_similarity,
             "faithful_coverage": faithful_coverage,
-            "negative_faithfulness": negative_faithfulness,
+            # "negative_faithfulness": negative_faithfulness,
             "faithfulness_llm": faithfulness_llm,
             "faithful_coverage_llm": faithful_coverage_llm
         }
 
     # ✅ NON-LLM BASED METHODS
 
-    def answer_chunk_similarity(self, query, retrieved_chunks, generated_answer):
+    def compute_blobwise_similarity(self, query, retrieved_chunks, generated_answer):
         """
         Measures the cosine similarity between the generated answer and the concatenated retrieved chunks.
         """
@@ -89,22 +93,62 @@ class FaithfulnessEvaluator:
         similarity_score = float(cosine_similarity(answer_embedding, retrieved_embedding)[0][0]) * 10  # ✅ Scaled to 0-10
 
         return similarity_score
+    def compute_chunkwise_similarity(self, generated_answer: str, retrieved_chunks: list) -> dict:
+        """Computes cosine similarity between the generated answer and each retrieved chunk, returns avg and max."""
+        if not retrieved_chunks:
+            print("⚠️ No retrieved chunks for chunkwise similarity.")
+            return {"avg_chunkwise_score": 0.0, "max_chunkwise_score": 0.0}
 
-    def compute_faithful_coverage(self, query, ground_truth_answer, generated_answer):
-        """Measures how much of the **ground truth answer** is contained in the generated response using ROUGE-L."""
-        rouge_scores = self.rouge_scorer.score(ground_truth_answer, generated_answer)
-        coverage_score = rouge_scores["rougeL"].fmeasure * 10  # ✅ Scale to 0-10
-
-        return coverage_score
-
-    def compute_negative_faithfulness(self, query, retrieved_chunks, generated_answer):
-        """Checks if the generated content contains **unverified** information not present in retrieved chunks."""
-        query_embedding = self.model.encode([query], normalize_embeddings=True)
         answer_embedding = self.model.encode([generated_answer], normalize_embeddings=True)
+        chunk_embeddings = self.model.encode(retrieved_chunks, normalize_embeddings=True)
 
-        negative_score = (1 - cosine_similarity(query_embedding, answer_embedding)[0][0]) * 10  # ✅ Scale to 0-10
+        similarities = cosine_similarity(answer_embedding, chunk_embeddings)[0]
+        similarities = [float(sim * 10) for sim in similarities]
 
-        return negative_score
+        avg_score = sum(similarities) / len(similarities)
+        max_score = max(similarities)
+
+        print(f"📊 Chunkwise Avg Similarity (0–10): {avg_score:.2f}")
+        print(f"📊 Chunkwise Max Similarity (0–10): {max_score:.2f}")
+
+        return {
+            "avg_chunkwise_score": round(avg_score, 2),
+            "max_chunkwise_score": round(max_score, 2)
+        }
+
+
+    def compute_faithful_coverage(self, ground_truth_answer: str, generated_answer: str) -> float:
+        """Evaluates how much of the ground truth is reflected in the generated answer (ROUGE + BERTScore)."""
+        if not ground_truth_answer.strip() or not generated_answer.strip():
+            print("⚠️ Empty ground truth or generated answer.")
+            return 0.0
+
+        # ROUGE-L
+        scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
+        rouge_scores = scorer.score(ground_truth_answer, generated_answer)
+        rouge_l_f1 = rouge_scores["rougeL"].fmeasure * 10  # Scale to 0–10
+
+        # BERTScore
+        P, R, F1 = bert_score([generated_answer], [ground_truth_answer], lang='en')
+        bert_f1_score = F1.item() * 10  # Scale to 0–10
+
+        # Combined Faithful Coverage Score
+        final_score = (rouge_l_f1 + bert_f1_score) / 2
+
+        print(f"📊 Faithful Coverage (ROUGE-L): {rouge_l_f1:.2f}")
+        print(f"📊 Faithful Coverage (BERTScore): {bert_f1_score:.2f}")
+        print(f"📊 Final Faithful Coverage Score (Avg): {final_score:.2f}")
+
+        return round(final_score, 2)
+
+    # def compute_negative_faithfulness(self, query, retrieved_chunks, generated_answer):
+    #     """Checks if the generated content contains **unverified** information not present in retrieved chunks."""
+    #     query_embedding = self.model.encode([query], normalize_embeddings=True)
+    #     answer_embedding = self.model.encode([generated_answer], normalize_embeddings=True)
+
+    #     negative_score = (1 - cosine_similarity(query_embedding, answer_embedding)[0][0]) * 10  # ✅ Scale to 0-10
+
+    #     return negative_score
 
     # ✅ LLM-BASED METHODS
 
@@ -113,13 +157,15 @@ class FaithfulnessEvaluator:
         Uses LLM to evaluate **faithfulness of generated response**.
         """
         prompt = f"""
-        You are an expert evaluator.
+        You are an expert faithfulness evaluator.
 
-        Given the RETRIEVED CONTEXT:
+        <retrieved context>
         {retrieved_chunks}
+        </retrieved context>
 
-        And the GENERATED ANSWER:
+        <generated answer>
         {generated_answer}
+        </generated answer>
 
         How **faithful** is the generated answer to the retrieved context?
         
@@ -138,14 +184,13 @@ class FaithfulnessEvaluator:
         prompt = f"""
         You are an expert judge evaluating retrieval quality.
 
-        Given the USER QUERY:
-        "{query}"
-
-        And the GROUND TRUTH ANSWER:
+        <ground truth answer>
         "{ground_truth_answer}"
+        </ground truth answer>
 
-        And the GENERATED ANSWER:
+        <generated answer>
         {generated_answer}
+        </generated answer>
 
         How much of the **ground truth answer** is present in the **generated answer**?
 
