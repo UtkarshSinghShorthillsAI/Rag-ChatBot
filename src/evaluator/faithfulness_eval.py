@@ -7,6 +7,7 @@ from rouge_score import rouge_scorer  # ✅ New import for ROUGE-L
 from src.pipeline.retriever import Retriever
 from src.pipeline.generator import Generator
 from src.evaluator.logging import EvaluationLogger
+from src.evaluator.evaluation_model import EvaluationModel
 
 # Load environment variables
 load_dotenv()
@@ -17,7 +18,7 @@ class FaithfulnessEvaluator:
     Evaluates the faithfulness of LLM-generated responses by checking retrieval consistency and grounding.
     """
 
-    def __init__(self, retriever: Retriever, generator: Generator, embedding_model="BAAI/bge-base-en"):
+    def __init__(self, retriever: Retriever, generator: Generator, evaluation_method : EvaluationModel, embedding_model="BAAI/bge-base-en"):
         """
         Initializes the FaithfulnessEvaluator.
         """
@@ -27,9 +28,11 @@ class FaithfulnessEvaluator:
         self.model = SentenceTransformer(embedding_model)  # ✅ Now using `bge-base-en`
         self.rouge_scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)  # ✅ ROUGE-L Scorer
 
+        self.evaluation_method = evaluation_method
+
     def evaluate_faithfulness(self, query, ground_truth_answer, top_k=5):
         """
-        ✅ Runs all faithfulness evaluation methods in one go, avoiding redundant retrievals/generations.
+        Runs all faithfulness evaluation methods in one go, avoiding redundant retrievals/generations.
         """
         print(f"\n🔍 Evaluating Faithfulness for Query: {query}")
 
@@ -127,7 +130,7 @@ class FaithfulnessEvaluator:
 
         Respond with a single numeric score (no extra text).
         """
-        response = self.generator.model.generate_content(prompt)
+        response = self.evaluation_method.evaluate(prompt)
         return self._parse_llm_score(response)
 
     def llm_faithful_coverage(self, query, ground_truth_answer, generated_answer):
@@ -153,14 +156,14 @@ class FaithfulnessEvaluator:
 
         Respond strictly with a **single numeric score** (no extra text).
         """
-        response = self.generator.model.generate_content(prompt)
+        response = self.evaluation_method.evaluate(prompt)
         return self._parse_llm_score(response)
 
     # ✅ Helper Functions
     def _parse_llm_score(self, response):
         """Extracts numerical score from LLM response."""
         try:
-            return float(response.text.strip())
+            return float(response.strip())
         except ValueError:
             import re
             match = re.search(r"(\d+(\.\d+)?)", response.text)

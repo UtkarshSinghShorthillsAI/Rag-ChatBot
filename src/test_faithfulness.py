@@ -4,13 +4,23 @@ from src.pipeline.generator import Generator
 from src.evaluator.faithfulness_eval import FaithfulnessEvaluator
 import logging
 from src.log_manager import setup_logger
+from src.evaluator.evaluation_model import ChatGPTEvaluationModel, LMStudioEvaluationModel
+from dotenv import load_dotenv
+import os
 
-# Set up logger for test run
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI")
+
+
 logger = setup_logger("logs/test_faithfulness.log")
+
+
 # Initialize retriever, generator, and evaluator
 retriever = Retriever()
 generator = Generator()
-faithfulness_eval = FaithfulnessEvaluator(retriever, generator)
+# evaluation_model = ChatGPTEvaluationModel(api_key=OPENAI_API_KEY) 
+evaluation_model = LMStudioEvaluationModel()
+faithfulness_eval = FaithfulnessEvaluator(retriever, generator, evaluation_model)
 
 # Load Ground Truth QnA
 with open("data/ground_truth_qna.json", "r") as f:
