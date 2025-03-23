@@ -18,6 +18,7 @@ data/*
 *.tmp
 *.swp
 .DS_Store
+logs/
 
 # Ignore Browser Drivers & Session Files
 selenium-sessions/
