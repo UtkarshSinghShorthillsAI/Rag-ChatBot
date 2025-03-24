@@ -61,7 +61,7 @@ class LMStudioEvaluationModel:
 
         for attempt in range(retries):
             try:
-                response = requests.post(self.api_url, json=payload, timeout=10)
+                response = requests.post(self.api_url, json=payload, timeout=15)
                 if response.status_code == 200:
                     content = response.json()['choices'][0]['message']['content'].strip()
                     logger.info("[LMStudio] Prompt succeeded.")

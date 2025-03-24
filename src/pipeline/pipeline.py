@@ -26,6 +26,6 @@ class RAGPipeline:
         retrieved_chunks, retrieved_sources = self.retriever.query(query, top_k=5)
 
         # Step 2: Generate response
-        response = self.generator.generate_response(query, retrieved_chunks, retrieved_sources)
+        gen_answer, response = self.generator.generate_response(query, retrieved_chunks, retrieved_sources)
         logger.info(f"✅ Response generated for query: {query}")
         return response

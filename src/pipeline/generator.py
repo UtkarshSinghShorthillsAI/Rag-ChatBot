@@ -49,15 +49,16 @@ class Generator:
 
         # Generate the response
         try:
+            final_response=""
             response = self.model.generate_content(prompt)
-            final_response = response.text if response else "⚠️ No response generated."
-            if "I don't know" in final_response:
+            gen_answer = response.text if response else "⚠️ No response generated."
+            if "I don't know" in gen_answer:
                 source_url = "https://minecraft.wiki"
             # Append source link
             if source_url:
-                final_response += f"\n\n📌 *Read more at:* [Minecraft Wiki]({source_url})"
+                final_response = gen_answer + f"\n\n📌 *Read more at:* [Minecraft Wiki]({source_url})"
 
-            return final_response
+            return gen_answer, final_response
         except Exception as e:
             logger.error(f"❌ Error generating response: {e}")
             return "⚠️ Error generating response."
